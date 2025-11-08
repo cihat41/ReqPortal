@@ -1,0 +1,6 @@
+@TalepSistemi.API_HostAddress = http://localhost:5290
+
+GET {{TalepSistemi.API_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
