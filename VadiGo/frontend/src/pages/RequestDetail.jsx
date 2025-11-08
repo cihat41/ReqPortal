@@ -12,13 +12,17 @@ import {
   Alert,
   Card,
   CardContent,
+  Table,
+  TableBody,
+  TableRow,
+  TableCell,
 } from '@mui/material';
 import {
   ArrowBack as ArrowBackIcon,
   Edit as EditIcon,
   Delete as DeleteIcon,
 } from '@mui/icons-material';
-import { requestsAPI } from '../services/api';
+import { requestsAPI, formTemplatesAPI } from '../services/api';
 import RequestAttachments from '../components/RequestAttachments';
 import RequestComments from '../components/RequestComments';
 import SlaIndicator from '../components/SlaIndicator';
@@ -48,12 +52,42 @@ const priorityLabels = {
   Critical: 'Kritik',
 };
 
+// Helper function to format field values
+const formatFieldValue = (field, value) => {
+  if (!value && value !== 0 && value !== false) return '-';
+
+  switch (field.fieldType) {
+    case 'currency':
+      return new Intl.NumberFormat('tr-TR', {
+        style: 'currency',
+        currency: 'TRY',
+      }).format(value);
+
+    case 'date':
+      return new Date(value).toLocaleDateString('tr-TR');
+
+    case 'datetime':
+      return new Date(value).toLocaleString('tr-TR');
+
+    case 'checkbox':
+      return Array.isArray(value) ? value.join(', ') : value;
+
+    case 'number':
+      return new Intl.NumberFormat('tr-TR').format(value);
+
+    default:
+      return value.toString();
+  }
+};
+
 const RequestDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const [request, setRequest] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [formTemplate, setFormTemplate] = useState(null);
+  const [formData, setFormData] = useState(null);
 
   useEffect(() => {
     fetchRequest();
@@ -64,7 +98,27 @@ const RequestDetail = () => {
       setLoading(true);
       setError('');
       const response = await requestsAPI.getById(id);
-      setRequest(response.data);
+      const requestData = response.data;
+      setRequest(requestData);
+
+      // Parse FormData if exists
+      if (requestData.formData) {
+        try {
+          setFormData(JSON.parse(requestData.formData));
+        } catch (err) {
+          console.error('FormData parse hatası:', err);
+        }
+      }
+
+      // Fetch form template if exists
+      if (requestData.formTemplateId) {
+        try {
+          const templateResponse = await formTemplatesAPI.getById(requestData.formTemplateId);
+          setFormTemplate(templateResponse.data);
+        } catch (err) {
+          console.error('Form şablonu yüklenirken hata:', err);
+        }
+      }
     } catch (err) {
       setError('Talep yüklenirken bir hata oluştu.');
       console.error(err);
@@ -268,6 +322,38 @@ const RequestDetail = () => {
                 <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap', color: 'text.secondary' }}>
                   {request.justification}
                 </Typography>
+              </Box>
+            </Grid>
+          )}
+
+          {/* Form Template Data */}
+          {formTemplate && formData && (
+            <Grid size={{ xs: 12 }}>
+              <Box sx={{ p: 3, bgcolor: '#f3e5f5', borderRadius: 2, border: '1px solid #ce93d8' }}>
+                <Typography variant="subtitle1" fontWeight={600} gutterBottom color="purple.dark">
+                  📋 {formTemplate.name}
+                </Typography>
+                <Table size="small">
+                  <TableBody>
+                    {formTemplate.fields
+                      ?.sort((a, b) => a.order - b.order)
+                      .map((field) => {
+                        const value = formData[field.name];
+                        if (!value && value !== 0 && value !== false) return null;
+
+                        return (
+                          <TableRow key={field.id}>
+                            <TableCell sx={{ fontWeight: 600, width: '30%', borderBottom: '1px solid #e0e0e0' }}>
+                              {field.label}
+                            </TableCell>
+                            <TableCell sx={{ borderBottom: '1px solid #e0e0e0' }}>
+                              {formatFieldValue(field, value)}
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                  </TableBody>
+                </Table>
               </Box>
             </Grid>
           )}

@@ -49,14 +49,27 @@ export default function FormTemplateBuilder() {
     description: '',
     category: '',
     isActive: true,
+    defaultWorkflowId: null,
     fields: [],
   });
 
+  const [workflows, setWorkflows] = useState([]);
+
   useEffect(() => {
+    loadWorkflows();
     if (isEdit) {
       loadTemplate();
     }
   }, [id]);
+
+  const loadWorkflows = async () => {
+    try {
+      const response = await api.get('/approvalworkflows');
+      setWorkflows(response.data.filter(w => w.isActive));
+    } catch (error) {
+      console.error('Onay akışları yüklenemedi:', error);
+    }
+  };
 
   const loadTemplate = async () => {
     try {
@@ -66,6 +79,7 @@ export default function FormTemplateBuilder() {
         description: response.data.description || '',
         category: response.data.category,
         isActive: response.data.isActive,
+        defaultWorkflowId: response.data.defaultWorkflowId || null,
         fields: response.data.fields || [],
       });
     } catch (error) {
@@ -87,6 +101,9 @@ export default function FormTemplateBuilder() {
           placeholder: '',
           helpText: '',
           options: '',
+          defaultValue: '',
+          dependsOn: '',
+          visibilityCondition: '',
         },
       ],
     });
@@ -175,6 +192,25 @@ export default function FormTemplateBuilder() {
                 margin="normal"
                 required
               />
+
+              <TextField
+                fullWidth
+                select
+                label="Varsayılan Onay Akışı"
+                value={formData.defaultWorkflowId || ''}
+                onChange={(e) => setFormData({ ...formData, defaultWorkflowId: e.target.value || null })}
+                margin="normal"
+                helperText="Bu form şablonu için varsayılan onay akışını seçin (opsiyonel)"
+              >
+                <MenuItem value="">
+                  <em>Seçilmedi</em>
+                </MenuItem>
+                {workflows.map((workflow) => (
+                  <MenuItem key={workflow.id} value={workflow.id}>
+                    {workflow.name} ({workflow.category})
+                  </MenuItem>
+                ))}
+              </TextField>
 
               <FormControlLabel
                 control={
@@ -331,9 +367,62 @@ export default function FormTemplateBuilder() {
                           <TextField
                             fullWidth
                             size="small"
+                            label="Varsayılan Değer"
+                            value={field.defaultValue || ''}
+                            onChange={(e) => handleFieldChange(index, 'defaultValue', e.target.value)}
+                            helperText="Bu alanın varsayılan değeri"
+                          />
+                        </Grid>
+                        <Grid size={{ xs: 12 }}>
+                          <TextField
+                            fullWidth
+                            size="small"
                             label="Yardım Metni"
                             value={field.helpText}
                             onChange={(e) => handleFieldChange(index, 'helpText', e.target.value)}
+                          />
+                        </Grid>
+
+                        <Grid size={{ xs: 12 }}>
+                          <Divider sx={{ my: 1 }}>
+                            <Typography variant="caption" color="text.secondary">
+                              Koşullu Görünürlük
+                            </Typography>
+                          </Divider>
+                        </Grid>
+
+                        <Grid size={{ xs: 12, sm: 6 }}>
+                          <TextField
+                            fullWidth
+                            size="small"
+                            select
+                            label="Bağımlı Alan (DependsOn)"
+                            value={field.dependsOn || ''}
+                            onChange={(e) => handleFieldChange(index, 'dependsOn', e.target.value)}
+                            helperText="Bu alan hangi alana bağlı?"
+                          >
+                            <MenuItem value="">
+                              <em>Bağımlı değil</em>
+                            </MenuItem>
+                            {formData.fields
+                              .filter((_, i) => i < index)
+                              .map((f, i) => (
+                                <MenuItem key={i} value={f.name}>
+                                  {f.label || f.name}
+                                </MenuItem>
+                              ))}
+                          </TextField>
+                        </Grid>
+
+                        <Grid size={{ xs: 12, sm: 6 }}>
+                          <TextField
+                            fullWidth
+                            size="small"
+                            label="Görünürlük Koşulu (JSON)"
+                            value={field.visibilityCondition || ''}
+                            onChange={(e) => handleFieldChange(index, 'visibilityCondition', e.target.value)}
+                            placeholder='{"equals": "Değer"}'
+                            helperText='Örn: {"equals": "Yüksek"}'
                           />
                         </Grid>
                       </Grid>

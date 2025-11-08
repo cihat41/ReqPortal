@@ -41,6 +41,7 @@ public class FormTemplatesController : ControllerBase
                 ft.Category,
                 ft.IsActive,
                 ft.Version,
+                ft.DefaultWorkflowId,
                 ft.CreatedAt,
                 ft.UpdatedAt,
                 CreatedBy = ft.Creator != null ? new
@@ -78,6 +79,7 @@ public class FormTemplatesController : ControllerBase
             template.Category,
             template.IsActive,
             template.Version,
+            template.DefaultWorkflowId,
             template.CreatedAt,
             template.UpdatedAt,
             CreatedBy = template.Creator != null ? new
@@ -122,6 +124,7 @@ public class FormTemplatesController : ControllerBase
             Description = dto.Description,
             Category = dto.Category,
             IsActive = dto.IsActive,
+            DefaultWorkflowId = dto.DefaultWorkflowId,
             CreatedBy = userId,
             CreatedAt = DateTime.UtcNow
         };
@@ -184,6 +187,7 @@ public class FormTemplatesController : ControllerBase
         template.Description = dto.Description;
         template.Category = dto.Category;
         template.IsActive = dto.IsActive;
+        template.DefaultWorkflowId = dto.DefaultWorkflowId;
         template.UpdatedAt = DateTime.UtcNow;
 
         // Remove old fields
@@ -242,6 +246,7 @@ public class FormTemplateDto
     public string? Description { get; set; }
     public string Category { get; set; } = string.Empty;
     public bool IsActive { get; set; } = true;
+    public int? DefaultWorkflowId { get; set; }
     public List<FormFieldDto>? Fields { get; set; }
 }
 

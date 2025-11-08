@@ -22,6 +22,9 @@ public class FormTemplate
 
     public int Version { get; set; } = 1;
 
+    // Workflow Integration
+    public int? DefaultWorkflowId { get; set; } // Bu form için varsayılan onay akışı
+
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
     public DateTime? UpdatedAt { get; set; }
@@ -30,6 +33,8 @@ public class FormTemplate
 
     // Navigation Properties
     public User? Creator { get; set; }
+    public ApprovalWorkflow? DefaultWorkflow { get; set; }
     public ICollection<FormField> Fields { get; set; } = new List<FormField>();
+    public ICollection<Request> Requests { get; set; } = new List<Request>();
 }
 

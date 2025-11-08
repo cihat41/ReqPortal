@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Container,
@@ -11,18 +11,16 @@ import {
   MenuItem,
   Alert,
   CircularProgress,
+  FormControl,
+  FormLabel,
+  RadioGroup,
+  FormControlLabel,
+  Radio,
+  Checkbox,
+  FormHelperText,
 } from '@mui/material';
 import { Save as SaveIcon, Send as SendIcon } from '@mui/icons-material';
-import { requestsAPI } from '../services/api';
-
-const categories = [
-  'İzin Talebi',
-  'Satın Alma',
-  'IT Destek',
-  'İnsan Kaynakları',
-  'Finans',
-  'Diğer',
-];
+import { requestsAPI, formTemplatesAPI } from '../services/api';
 
 const priorities = [
   { value: 'Low', label: 'Düşük' },
@@ -31,22 +29,315 @@ const priorities = [
   { value: 'Critical', label: 'Kritik' },
 ];
 
+// Dynamic Form Field Renderer Component
+const DynamicFormField = ({ field, value, onChange, allValues }) => {
+  // Check visibility condition
+  const isVisible = () => {
+    if (!field.dependsOn || !field.visibilityCondition) return true;
+
+    try {
+      const condition = JSON.parse(field.visibilityCondition);
+      const dependentValue = allValues[field.dependsOn];
+
+      // Simple equality check
+      if (condition.equals !== undefined) {
+        return dependentValue === condition.equals;
+      }
+
+      // Array contains check
+      if (condition.in !== undefined) {
+        return condition.in.includes(dependentValue);
+      }
+
+      return true;
+    } catch {
+      return true;
+    }
+  };
+
+  if (!isVisible()) return null;
+
+  const commonSx = {
+    '& .MuiOutlinedInput-root': {
+      backgroundColor: 'background.paper',
+    },
+  };
+
+  // Parse options for dropdown, radio, checkbox
+  let options = [];
+  if (field.options) {
+    try {
+      options = JSON.parse(field.options);
+    } catch {
+      options = [];
+    }
+  }
+
+  const renderField = () => {
+    switch (field.fieldType) {
+      case 'text':
+      case 'email':
+        return (
+          <TextField
+            fullWidth
+            required={field.isRequired}
+            type={field.fieldType}
+            placeholder={field.placeholder || ''}
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            helperText={field.helpText}
+            sx={commonSx}
+          />
+        );
+
+      case 'number':
+      case 'currency':
+        return (
+          <TextField
+            fullWidth
+            required={field.isRequired}
+            type="number"
+            placeholder={field.placeholder || ''}
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            helperText={field.helpText}
+            slotProps={{
+              htmlInput: { min: 0, step: field.fieldType === 'currency' ? 0.01 : 1 }
+            }}
+            sx={commonSx}
+          />
+        );
+
+      case 'textarea':
+        return (
+          <TextField
+            fullWidth
+            required={field.isRequired}
+            multiline
+            rows={4}
+            placeholder={field.placeholder || ''}
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            helperText={field.helpText}
+            sx={commonSx}
+          />
+        );
+
+      case 'date':
+        return (
+          <TextField
+            fullWidth
+            required={field.isRequired}
+            type="date"
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            helperText={field.helpText}
+            slotProps={{
+              inputLabel: { shrink: true }
+            }}
+            sx={commonSx}
+          />
+        );
+
+      case 'datetime':
+        return (
+          <TextField
+            fullWidth
+            required={field.isRequired}
+            type="datetime-local"
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            helperText={field.helpText}
+            slotProps={{
+              inputLabel: { shrink: true }
+            }}
+            sx={commonSx}
+          />
+        );
+
+      case 'dropdown':
+        return (
+          <TextField
+            fullWidth
+            required={field.isRequired}
+            select
+            placeholder={field.placeholder || 'Seçin'}
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            helperText={field.helpText}
+            sx={commonSx}
+          >
+            {options.map((option) => (
+              <MenuItem key={option} value={option}>
+                {option}
+              </MenuItem>
+            ))}
+          </TextField>
+        );
+
+      case 'radio':
+        return (
+          <FormControl component="fieldset" required={field.isRequired}>
+            <RadioGroup value={value} onChange={(e) => onChange(e.target.value)}>
+              {options.map((option) => (
+                <FormControlLabel
+                  key={option}
+                  value={option}
+                  control={<Radio />}
+                  label={option}
+                />
+              ))}
+            </RadioGroup>
+            {field.helpText && <FormHelperText>{field.helpText}</FormHelperText>}
+          </FormControl>
+        );
+
+      case 'checkbox':
+        return (
+          <FormControl component="fieldset" required={field.isRequired}>
+            {options.map((option) => (
+              <FormControlLabel
+                key={option}
+                control={
+                  <Checkbox
+                    checked={(value || []).includes(option)}
+                    onChange={(e) => {
+                      const currentValues = value || [];
+                      if (e.target.checked) {
+                        onChange([...currentValues, option]);
+                      } else {
+                        onChange(currentValues.filter((v) => v !== option));
+                      }
+                    }}
+                  />
+                }
+                label={option}
+              />
+            ))}
+            {field.helpText && <FormHelperText>{field.helpText}</FormHelperText>}
+          </FormControl>
+        );
+
+      case 'file':
+        return (
+          <Box>
+            <Button variant="outlined" component="label">
+              Dosya Seç
+              <input
+                type="file"
+                hidden
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) {
+                    onChange(file.name);
+                  }
+                }}
+              />
+            </Button>
+            {value && (
+              <Typography variant="body2" sx={{ mt: 1 }}>
+                Seçilen dosya: {value}
+              </Typography>
+            )}
+            {field.helpText && <FormHelperText>{field.helpText}</FormHelperText>}
+          </Box>
+        );
+
+      default:
+        return (
+          <TextField
+            fullWidth
+            required={field.isRequired}
+            placeholder={field.placeholder || ''}
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            helperText={field.helpText}
+            sx={commonSx}
+          />
+        );
+    }
+  };
+
+  return (
+    <Grid size={{ xs: 12, md: field.fieldType === 'textarea' ? 12 : 6 }}>
+      <Typography variant="subtitle2" color="text.secondary" gutterBottom fontWeight={600}>
+        {field.label} {field.isRequired && '*'}
+      </Typography>
+      {renderField()}
+    </Grid>
+  );
+};
+
 const CreateRequest = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [templates, setTemplates] = useState([]);
+  const [selectedTemplate, setSelectedTemplate] = useState(null);
+  const [templateDetails, setTemplateDetails] = useState(null);
+  const [loadingTemplate, setLoadingTemplate] = useState(false);
+
   const [formData, setFormData] = useState({
     title: '',
     description: '',
-    category: '',
     priority: 'Medium',
-    estimatedCost: '',
-    justification: '',
     slaHours: '',
   });
 
+  const [dynamicFormData, setDynamicFormData] = useState({});
+
+  // Fetch active form templates on mount
+  useEffect(() => {
+    const fetchTemplates = async () => {
+      try {
+        const response = await formTemplatesAPI.getAll({ isActive: true });
+        setTemplates(response.data || []);
+      } catch (err) {
+        console.error('Form şablonları yüklenirken hata:', err);
+        setError('Form şablonları yüklenemedi');
+      }
+    };
+    fetchTemplates();
+  }, []);
+
+  // Fetch template details when selected
+  useEffect(() => {
+    const fetchTemplateDetails = async () => {
+      if (!selectedTemplate) {
+        setTemplateDetails(null);
+        setDynamicFormData({});
+        return;
+      }
+
+      try {
+        setLoadingTemplate(true);
+        const response = await formTemplatesAPI.getById(selectedTemplate);
+        setTemplateDetails(response.data);
+
+        // Initialize dynamic form data with default values
+        const initialData = {};
+        response.data.fields?.forEach(field => {
+          if (field.defaultValue) {
+            initialData[field.name] = field.defaultValue;
+          }
+        });
+        setDynamicFormData(initialData);
+      } catch (err) {
+        console.error('Form şablonu detayları yüklenirken hata:', err);
+        setError('Form şablonu detayları yüklenemedi');
+      } finally {
+        setLoadingTemplate(false);
+      }
+    };
+    fetchTemplateDetails();
+  }, [selectedTemplate]);
+
   const handleChange = (field, value) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleDynamicFieldChange = (fieldName, value) => {
+    setDynamicFormData((prev) => ({ ...prev, [fieldName]: value }));
   };
 
   const handleSubmit = async (isDraft = false) => {
@@ -54,15 +345,29 @@ const CreateRequest = () => {
       setLoading(true);
       setError('');
 
+      // Validate required dynamic fields
+      if (!isDraft && templateDetails) {
+        const requiredFields = templateDetails.fields?.filter(f => f.isRequired) || [];
+        const missingFields = requiredFields.filter(f => !dynamicFormData[f.name]);
+
+        if (missingFields.length > 0) {
+          setError(`Lütfen zorunlu alanları doldurun: ${missingFields.map(f => f.label).join(', ')}`);
+          setLoading(false);
+          return;
+        }
+      }
+
       const requestData = {
         title: formData.title,
         description: formData.description,
-        type: formData.category, // Type ve Category aynı değer
-        category: formData.category,
+        type: templateDetails?.category || 'Genel',
+        category: templateDetails?.category || 'Genel',
         priority: formData.priority,
-        justification: formData.justification,
-        estimatedCost: formData.estimatedCost ? parseFloat(formData.estimatedCost) : null,
+        justification: formData.description, // Use description as justification
+        estimatedCost: null,
         slaHours: formData.slaHours ? parseInt(formData.slaHours) : null,
+        formTemplateId: selectedTemplate,
+        formData: JSON.stringify(dynamicFormData),
         saveAsDraft: isDraft,
       };
 
@@ -76,7 +381,7 @@ const CreateRequest = () => {
     }
   };
 
-  const isValid = formData.title && formData.description && formData.category;
+  const isValid = formData.title && formData.description && selectedTemplate;
 
   return (
     <Container maxWidth="lg" sx={{ mt: { xs: 2, sm: 3, md: 4 }, mb: 4, px: { xs: 2, sm: 3 } }}>
@@ -106,6 +411,37 @@ const CreateRequest = () => {
         }}
       >
         <Grid container spacing={3}>
+          {/* Form Şablonu Seçimi */}
+          <Grid size={{ xs: 12 }}>
+            <Typography variant="subtitle2" color="text.secondary" gutterBottom fontWeight={600}>
+              Form Şablonu *
+            </Typography>
+            <TextField
+              fullWidth
+              required
+              select
+              placeholder="Form şablonu seçin"
+              value={selectedTemplate || ''}
+              onChange={(e) => setSelectedTemplate(e.target.value)}
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  backgroundColor: 'background.paper',
+                },
+              }}
+            >
+              {templates.map((template) => (
+                <MenuItem key={template.id} value={template.id}>
+                  {template.name} {template.description && `- ${template.description}`}
+                </MenuItem>
+              ))}
+            </TextField>
+            {templateDetails && (
+              <FormHelperText>
+                Kategori: {templateDetails.category}
+              </FormHelperText>
+            )}
+          </Grid>
+
           {/* Başlık */}
           <Grid size={{ xs: 12 }}>
             <Typography variant="subtitle2" color="text.secondary" gutterBottom fontWeight={600}>
@@ -125,32 +461,7 @@ const CreateRequest = () => {
             />
           </Grid>
 
-          {/* Kategori ve Öncelik */}
-          <Grid size={{ xs: 12, md: 6 }}>
-            <Typography variant="subtitle2" color="text.secondary" gutterBottom fontWeight={600}>
-              Kategori *
-            </Typography>
-            <TextField
-              fullWidth
-              required
-              select
-              placeholder="Kategori seçin"
-              value={formData.category}
-              onChange={(e) => handleChange('category', e.target.value)}
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  backgroundColor: 'background.paper',
-                },
-              }}
-            >
-              {categories.map((category) => (
-                <MenuItem key={category} value={category}>
-                  {category}
-                </MenuItem>
-              ))}
-            </TextField>
-          </Grid>
-
+          {/* Öncelik */}
           <Grid size={{ xs: 12, md: 6 }}>
             <Typography variant="subtitle2" color="text.secondary" gutterBottom fontWeight={600}>
               Öncelik
@@ -174,69 +485,6 @@ const CreateRequest = () => {
             </TextField>
           </Grid>
 
-          {/* Açıklama */}
-          <Grid size={{ xs: 12 }}>
-            <Typography variant="subtitle2" color="text.secondary" gutterBottom fontWeight={600}>
-              Açıklama *
-            </Typography>
-            <TextField
-              fullWidth
-              required
-              multiline
-              rows={5}
-              placeholder="Talep detaylarını açıklayın..."
-              value={formData.description}
-              onChange={(e) => handleChange('description', e.target.value)}
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  backgroundColor: 'background.paper',
-                },
-              }}
-            />
-          </Grid>
-
-          {/* Gerekçe */}
-          <Grid size={{ xs: 12 }}>
-            <Typography variant="subtitle2" color="text.secondary" gutterBottom fontWeight={600}>
-              Gerekçe
-            </Typography>
-            <TextField
-              fullWidth
-              multiline
-              rows={4}
-              placeholder="Talebin gerekçesini açıklayın..."
-              value={formData.justification}
-              onChange={(e) => handleChange('justification', e.target.value)}
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  backgroundColor: 'background.paper',
-                },
-              }}
-            />
-          </Grid>
-
-          {/* Tahmini Maliyet */}
-          <Grid size={{ xs: 12, md: 6 }}>
-            <Typography variant="subtitle2" color="text.secondary" gutterBottom fontWeight={600}>
-              Tahmini Maliyet (₺)
-            </Typography>
-            <TextField
-              fullWidth
-              type="number"
-              placeholder="0.00"
-              value={formData.estimatedCost}
-              onChange={(e) => handleChange('estimatedCost', e.target.value)}
-              slotProps={{
-                htmlInput: { min: 0, step: 0.01 }
-              }}
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  backgroundColor: 'background.paper',
-                },
-              }}
-            />
-          </Grid>
-
           {/* SLA Süresi */}
           <Grid size={{ xs: 12, md: 6 }}>
             <Typography variant="subtitle2" color="text.secondary" gutterBottom fontWeight={600}>
@@ -257,7 +505,58 @@ const CreateRequest = () => {
                 },
               }}
             />
+          </Grid> 
+          
+          {/* Açıklama */}
+          <Grid size={{ xs: 12 }}>
+            <Typography variant="subtitle2" color="text.secondary" gutterBottom fontWeight={600}>
+              Açıklama *
+            </Typography>
+            <TextField
+              fullWidth
+              required
+              multiline
+              rows={4}
+              placeholder="Talep detaylarını açıklayın..."
+              value={formData.description}
+              onChange={(e) => handleChange('description', e.target.value)}
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  backgroundColor: 'background.paper',
+                },
+              }}
+            />
           </Grid>
+
+          {/* Dinamik Form Alanları */}
+          {loadingTemplate && (
+            <Grid size={{ xs: 12 }}>
+              <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+                <CircularProgress />
+              </Box>
+            </Grid>
+          )}
+
+          {!loadingTemplate && templateDetails && templateDetails.fields && templateDetails.fields.length > 0 && (
+            <>
+              <Grid size={{ xs: 12 }}>
+                <Typography variant="h6" gutterBottom sx={{ mt: 2, mb: 1 }}>
+                  Form Alanları
+                </Typography>
+              </Grid>
+              {templateDetails.fields
+                .sort((a, b) => a.order - b.order)
+                .map((field) => (
+                  <DynamicFormField
+                    key={field.id}
+                    field={field}
+                    value={dynamicFormData[field.name] || ''}
+                    onChange={(value) => handleDynamicFieldChange(field.name, value)}
+                    allValues={dynamicFormData}
+                  />
+                ))}
+            </>
+          )}
 
           {/* Butonlar */}
           <Grid size={{ xs: 12 }}>

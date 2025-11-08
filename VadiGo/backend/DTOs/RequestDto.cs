@@ -13,6 +13,7 @@ public class RequestDto
     public string Status { get; set; } = string.Empty;
     public int RequesterId { get; set; }
     public string RequesterName { get; set; } = string.Empty;
+    public int? FormTemplateId { get; set; }
     public string? FormData { get; set; }
     public DateTime? DueDate { get; set; }
     public int? SlaHours { get; set; }
@@ -31,6 +32,7 @@ public class CreateRequestDto
     public string? Justification { get; set; }
     public decimal? EstimatedCost { get; set; }
     public int? SlaHours { get; set; }
+    public int? FormTemplateId { get; set; }
     public string? FormData { get; set; }
     public bool SaveAsDraft { get; set; } = false;
 }

@@ -37,6 +37,9 @@ public class Request
     [MaxLength(50)]
     public string Status { get; set; } = RequestStatus.Draft;
 
+    // Form Template Integration
+    public int? FormTemplateId { get; set; } // Hangi form şablonu kullanıldı?
+
     public string? FormData { get; set; } // JSON formatında form verileri
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
@@ -55,6 +58,7 @@ public class Request
 
     // Navigation Properties
     public User Requester { get; set; } = null!;
+    public FormTemplate? FormTemplate { get; set; }
     public ICollection<Approval> Approvals { get; set; } = new List<Approval>();
     public ICollection<RequestComment> Comments { get; set; } = new List<RequestComment>();
     public ICollection<RequestAttachment> Attachments { get; set; } = new List<RequestAttachment>();
