@@ -93,20 +93,20 @@ public class DashboardController : ControllerBase
 
         return Ok(new
         {
-            RequestStats = new
+            requestStats = new
             {
-                Total = totalRequests,
-                Pending = pendingRequests,
-                Approved = approvedRequests,
-                Rejected = rejectedRequests,
-                Draft = draftRequests
+                total = totalRequests,
+                pending = pendingRequests,
+                approved = approvedRequests,
+                rejected = rejectedRequests,
+                draft = draftRequests
             },
-            ApprovalStats = new
+            approvalStats = new
             {
-                PendingApprovals = pendingApprovals
+                pending = pendingApprovals
             },
-            RecentRequests = recentRequests,
-            RecentApprovals = recentApprovals
+            recentRequests = recentRequests,
+            recentApprovals = recentApprovals
         });
     }
 }

@@ -1,7 +1,7 @@
 import axios from 'axios';
 
-// API base URL - backend port 7225'da çalışıyor
-const API_BASE_URL = 'https://localhost:7225/api';
+// API base URL - Vite proxy kullanıyoruz
+const API_BASE_URL = '/api';
 
 // Axios instance oluştur
 const api = axios.create({
@@ -88,6 +88,210 @@ export const approvalsAPI = {
 export const dashboardAPI = {
   getStats: () =>
     api.get('/dashboard/stats'),
+};
+
+// Form Templates API
+export const formTemplatesAPI = {
+  getAll: (params) =>
+    api.get('/formtemplates', { params }),
+
+  getById: (id) =>
+    api.get(`/formtemplates/${id}`),
+
+  create: (templateData) =>
+    api.post('/formtemplates', templateData),
+
+  update: (id, templateData) =>
+    api.put(`/formtemplates/${id}`, templateData),
+
+  delete: (id) =>
+    api.delete(`/formtemplates/${id}`),
+
+  activate: (id) =>
+    api.post(`/formtemplates/${id}/activate`),
+
+  deactivate: (id) =>
+    api.post(`/formtemplates/${id}/deactivate`),
+};
+
+// Users API
+export const usersAPI = {
+  getAll: (params) =>
+    api.get('/users', { params }),
+
+  getById: (id) =>
+    api.get(`/users/${id}`),
+
+  create: (userData) =>
+    api.post('/users', userData),
+
+  update: (id, userData) =>
+    api.put(`/users/${id}`, userData),
+
+  delete: (id) =>
+    api.delete(`/users/${id}`),
+
+  getRoles: () =>
+    api.get('/users/roles'),
+
+  assignRole: (userId, roleId) =>
+    api.post(`/users/${userId}/roles/${roleId}`),
+
+  removeRole: (userId, roleId) =>
+    api.delete(`/users/${userId}/roles/${roleId}`),
+};
+
+// Comments API
+export const commentsAPI = {
+  getByRequestId: (requestId) =>
+    api.get(`/comments/request/${requestId}`),
+
+  create: (commentData) =>
+    api.post('/comments', commentData),
+
+  delete: (id) =>
+    api.delete(`/comments/${id}`),
+};
+
+// Attachments API
+export const attachmentsAPI = {
+  getByRequestId: (requestId) =>
+    api.get(`/attachments/request/${requestId}`),
+
+  upload: (requestId, formData) =>
+    api.post(`/attachments/upload/${requestId}`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    }),
+
+  download: (id) =>
+    api.get(`/attachments/${id}/download`, {
+      responseType: 'blob',
+    }),
+
+  delete: (id) =>
+    api.delete(`/attachments/${id}`),
+};
+
+// Audit Logs API
+export const auditLogsAPI = {
+  getAll: (params) =>
+    api.get('/auditlogs', { params }),
+
+  getByEntity: (entityType, entityId) =>
+    api.get(`/auditlogs/${entityType}/${entityId}`),
+};
+
+// Approval Workflows API
+export const workflowsAPI = {
+  getAll: (params) =>
+    api.get('/approvalworkflows', { params }),
+
+  getById: (id) =>
+    api.get(`/approvalworkflows/${id}`),
+
+  create: (workflowData) =>
+    api.post('/approvalworkflows', workflowData),
+
+  update: (id, workflowData) =>
+    api.put(`/approvalworkflows/${id}`, workflowData),
+
+  delete: (id) =>
+    api.delete(`/approvalworkflows/${id}`),
+
+  activate: (id) =>
+    api.post(`/approvalworkflows/${id}/activate`),
+
+  deactivate: (id) =>
+    api.post(`/approvalworkflows/${id}/deactivate`),
+};
+
+// Email Templates API
+export const emailTemplatesAPI = {
+  getAll: (params) =>
+    api.get('/emailtemplates', { params }),
+
+  getById: (id) =>
+    api.get(`/emailtemplates/${id}`),
+
+  create: (templateData) =>
+    api.post('/emailtemplates', templateData),
+
+  update: (id, templateData) =>
+    api.put(`/emailtemplates/${id}`, templateData),
+
+  delete: (id) =>
+    api.delete(`/emailtemplates/${id}`),
+
+  getVariables: () =>
+    api.get('/emailtemplates/variables'),
+
+  preview: (id, data) =>
+    api.post(`/emailtemplates/${id}/preview`, data),
+};
+
+// Settings API
+export const settingsAPI = {
+  getEmailSettings: () =>
+    api.get('/settings/email'),
+
+  updateEmailSettings: (settings) =>
+    api.put('/settings/email', settings),
+
+  testEmail: (email) =>
+    api.post('/settings/email/test', { email }),
+};
+
+// Reports API
+export const reportsAPI = {
+  getOverview: (params) =>
+    api.get('/reports/overview', { params }),
+
+  getByStatus: (params) =>
+    api.get('/reports/by-status', { params }),
+
+  getByCategory: (params) =>
+    api.get('/reports/by-category', { params }),
+
+  getByUser: (params) =>
+    api.get('/reports/by-user', { params }),
+
+  getSlaCompliance: (params) =>
+    api.get('/reports/sla-compliance', { params }),
+
+  getApprovalPerformance: (params) =>
+    api.get('/reports/approval-performance', { params }),
+
+  getTimeSeries: (params) =>
+    api.get('/reports/time-series', { params }),
+
+  exportToExcel: (params) =>
+    api.get('/reports/export/excel', {
+      params,
+      responseType: 'blob',
+    }),
+};
+
+// Notifications API
+export const notificationsAPI = {
+  getAll: (params) =>
+    api.get('/notifications', { params }),
+
+  getUnreadCount: () =>
+    api.get('/notifications/unread-count'),
+
+  markAsRead: (id) =>
+    api.post(`/notifications/${id}/mark-read`),
+
+  markAllAsRead: () =>
+    api.post('/notifications/mark-all-read'),
+
+  delete: (id) =>
+    api.delete(`/notifications/${id}`),
+
+  clearAll: () =>
+    api.delete('/notifications/clear-all'),
 };
 
 export default api;

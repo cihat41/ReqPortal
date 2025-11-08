@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import {
   Container,
   Paper,
@@ -27,7 +26,6 @@ import {
 import { useAuth } from '../contexts/AuthContext';
 
 const Login = () => {
-  const navigate = useNavigate();
   const { login } = useAuth();
   const [formData, setFormData] = useState({
     email: '',
@@ -52,15 +50,19 @@ const Login = () => {
 
     try {
       const result = await login(formData.email, formData.password);
-      
+
       if (result.success) {
-        navigate('/dashboard');
+        // localStorage'a yazma işleminin tamamlanması için kısa bir gecikme
+        await new Promise(resolve => setTimeout(resolve, 200));
+        // Tam sayfa yenileme ile dashboard'a git
+        // Bu sayede localStorage'daki token kesinlikle yüklenmiş olur
+        window.location.href = '/dashboard';
       } else {
         setError(result.error || 'Giriş yapılamadı');
+        setLoading(false);
       }
     } catch (err) {
       setError('Bir hata oluştu. Lütfen tekrar deneyin.');
-    } finally {
       setLoading(false);
     }
   };

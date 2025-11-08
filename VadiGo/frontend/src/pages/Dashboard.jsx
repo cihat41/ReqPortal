@@ -31,6 +31,7 @@ import {
 } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
 import { dashboardAPI } from '../services/api';
+import SlaIndicator from '../components/SlaIndicator';
 
 const statusColors = {
   Draft: 'default',
@@ -51,15 +52,18 @@ const statusLabels = {
 };
 
 const Dashboard = () => {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
   useEffect(() => {
-    fetchDashboardStats();
-  }, []);
+    // Sadece kullanıcı yüklendiyse ve token varsa API çağrısı yap
+    if (!authLoading && user && localStorage.getItem('token')) {
+      fetchDashboardStats();
+    }
+  }, [authLoading, user]);
 
   const fetchDashboardStats = async () => {
     try {
@@ -264,13 +268,14 @@ const Dashboard = () => {
                 <TableCell sx={{ fontWeight: 600, minWidth: 150 }}>Başlık</TableCell>
                 <TableCell sx={{ fontWeight: 600, minWidth: 120 }}>Kategori</TableCell>
                 <TableCell sx={{ fontWeight: 600, minWidth: 120 }}>Durum</TableCell>
+                <TableCell sx={{ fontWeight: 600, minWidth: 120 }}>SLA</TableCell>
                 <TableCell sx={{ fontWeight: 600, minWidth: 100 }}>Tarih</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {!stats?.recentRequests || stats.recentRequests.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={4} align="center">
+                  <TableCell colSpan={5} align="center">
                     <Box sx={{ py: 4 }}>
                       <DescriptionIcon sx={{ fontSize: 48, color: 'text.disabled', mb: 2 }} />
                       <Typography color="text.secondary">
@@ -317,6 +322,9 @@ const Dashboard = () => {
                         size="small"
                         sx={{ fontWeight: 500 }}
                       />
+                    </TableCell>
+                    <TableCell>
+                      <SlaIndicator request={request} />
                     </TableCell>
                     <TableCell>
                       <Typography variant="body2" color="text.secondary">

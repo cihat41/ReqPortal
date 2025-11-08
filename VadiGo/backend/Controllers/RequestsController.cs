@@ -58,10 +58,16 @@ public class RequestsController : ControllerBase
                     Title = r.Title,
                     Description = r.Description,
                     Type = r.Type,
+                    Category = r.Category,
+                    Priority = r.Priority,
+                    Justification = r.Justification,
+                    EstimatedCost = r.EstimatedCost,
                     Status = r.Status,
                     RequesterId = r.RequesterId,
                     RequesterName = $"{r.Requester.FirstName} {r.Requester.LastName}",
                     FormData = r.FormData,
+                    DueDate = r.DueDate,
+                    SlaHours = r.SlaHours,
                     CreatedAt = r.CreatedAt,
                     SubmittedAt = r.SubmittedAt,
                     CompletedAt = r.CompletedAt
@@ -98,10 +104,16 @@ public class RequestsController : ControllerBase
                 Title = request.Title,
                 Description = request.Description,
                 Type = request.Type,
+                Category = request.Category,
+                Priority = request.Priority,
+                Justification = request.Justification,
+                EstimatedCost = request.EstimatedCost,
                 Status = request.Status,
                 RequesterId = request.RequesterId,
                 RequesterName = $"{request.Requester.FirstName} {request.Requester.LastName}",
                 FormData = request.FormData,
+                DueDate = request.DueDate,
+                SlaHours = request.SlaHours,
                 CreatedAt = request.CreatedAt,
                 SubmittedAt = request.SubmittedAt,
                 CompletedAt = request.CompletedAt
@@ -128,9 +140,15 @@ public class RequestsController : ControllerBase
                 Title = createRequestDto.Title,
                 Description = createRequestDto.Description,
                 Type = createRequestDto.Type,
+                Category = createRequestDto.Category,
+                Priority = createRequestDto.Priority,
+                Justification = createRequestDto.Justification,
+                EstimatedCost = createRequestDto.EstimatedCost,
                 RequesterId = userId,
                 Status = createRequestDto.SaveAsDraft ? RequestStatus.Draft : RequestStatus.Submitted,
                 FormData = createRequestDto.FormData,
+                SlaHours = createRequestDto.SlaHours,
+                DueDate = createRequestDto.SlaHours.HasValue ? DateTime.UtcNow.AddHours(createRequestDto.SlaHours.Value) : null,
                 CreatedAt = DateTime.UtcNow,
                 SubmittedAt = createRequestDto.SaveAsDraft ? null : DateTime.UtcNow
             };
@@ -173,10 +191,16 @@ public class RequestsController : ControllerBase
                 Title = request.Title,
                 Description = request.Description,
                 Type = request.Type,
+                Category = request.Category,
+                Priority = request.Priority,
+                Justification = request.Justification,
+                EstimatedCost = request.EstimatedCost,
                 Status = request.Status,
                 RequesterId = request.RequesterId,
                 RequesterName = $"{requester!.FirstName} {requester.LastName}",
                 FormData = request.FormData,
+                DueDate = request.DueDate,
+                SlaHours = request.SlaHours,
                 CreatedAt = request.CreatedAt,
                 SubmittedAt = request.SubmittedAt,
                 CompletedAt = request.CompletedAt
@@ -221,6 +245,18 @@ public class RequestsController : ControllerBase
             if (!string.IsNullOrEmpty(updateRequestDto.Type))
                 request.Type = updateRequestDto.Type;
 
+            if (!string.IsNullOrEmpty(updateRequestDto.Category))
+                request.Category = updateRequestDto.Category;
+
+            if (!string.IsNullOrEmpty(updateRequestDto.Priority))
+                request.Priority = updateRequestDto.Priority;
+
+            if (updateRequestDto.Justification != null)
+                request.Justification = updateRequestDto.Justification;
+
+            if (updateRequestDto.EstimatedCost.HasValue)
+                request.EstimatedCost = updateRequestDto.EstimatedCost;
+
             if (updateRequestDto.FormData != null)
                 request.FormData = updateRequestDto.FormData;
 
@@ -234,10 +270,16 @@ public class RequestsController : ControllerBase
                 Title = request.Title,
                 Description = request.Description,
                 Type = request.Type,
+                Category = request.Category,
+                Priority = request.Priority,
+                Justification = request.Justification,
+                EstimatedCost = request.EstimatedCost,
                 Status = request.Status,
                 RequesterId = request.RequesterId,
                 RequesterName = $"{request.Requester.FirstName} {request.Requester.LastName}",
                 FormData = request.FormData,
+                DueDate = request.DueDate,
+                SlaHours = request.SlaHours,
                 CreatedAt = request.CreatedAt,
                 SubmittedAt = request.SubmittedAt,
                 CompletedAt = request.CompletedAt

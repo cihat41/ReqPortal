@@ -18,6 +18,13 @@ public class ApplicationDbContext : DbContext
     public DbSet<RequestComment> RequestComments { get; set; }
     public DbSet<RequestAttachment> RequestAttachments { get; set; }
     public DbSet<AuditLog> AuditLogs { get; set; }
+    public DbSet<FormTemplate> FormTemplates { get; set; }
+    public DbSet<FormField> FormFields { get; set; }
+    public DbSet<ApprovalWorkflow> ApprovalWorkflows { get; set; }
+    public DbSet<ApprovalWorkflowStep> ApprovalWorkflowSteps { get; set; }
+    public DbSet<EmailTemplate> EmailTemplates { get; set; }
+    public DbSet<Notification> Notifications { get; set; }
+    public DbSet<EmailSettings> EmailSettings { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -102,6 +109,82 @@ public class ApplicationDbContext : DbContext
         {
             entity.HasIndex(e => e.EntityName);
             entity.HasIndex(e => e.CreatedAt);
+        });
+
+        // FormTemplate configuration
+        modelBuilder.Entity<FormTemplate>(entity =>
+        {
+            entity.HasOne(ft => ft.Creator)
+                .WithMany()
+                .HasForeignKey(ft => ft.CreatedBy)
+                .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        // FormField configuration
+        modelBuilder.Entity<FormField>(entity =>
+        {
+            entity.HasOne(ff => ff.FormTemplate)
+                .WithMany(ft => ft.Fields)
+                .HasForeignKey(ff => ff.FormTemplateId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // ApprovalWorkflowStep configuration
+        modelBuilder.Entity<ApprovalWorkflowStep>(entity =>
+        {
+            entity.HasOne(aws => aws.Workflow)
+                .WithMany(aw => aw.Steps)
+                .HasForeignKey(aws => aws.WorkflowId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(aws => aws.Role)
+                .WithMany()
+                .HasForeignKey(aws => aws.RoleId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasOne(aws => aws.User)
+                .WithMany()
+                .HasForeignKey(aws => aws.UserId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasOne(aws => aws.EscalationRole)
+                .WithMany()
+                .HasForeignKey(aws => aws.EscalationRoleId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasOne(aws => aws.EscalationUser)
+                .WithMany()
+                .HasForeignKey(aws => aws.EscalationUserId)
+                .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        // Notification configuration
+        modelBuilder.Entity<Notification>(entity =>
+        {
+            entity.HasOne(n => n.User)
+                .WithMany()
+                .HasForeignKey(n => n.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(n => n.RelatedRequest)
+                .WithMany()
+                .HasForeignKey(n => n.RelatedRequestId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasOne(n => n.RelatedApproval)
+                .WithMany()
+                .HasForeignKey(n => n.RelatedApprovalId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasIndex(e => e.UserId);
+            entity.HasIndex(e => e.IsRead);
+            entity.HasIndex(e => e.CreatedAt);
+        });
+
+        // EmailSettings configuration
+        modelBuilder.Entity<EmailSettings>(entity =>
+        {
+            entity.HasIndex(e => e.IsActive);
         });
 
         // Seed initial data

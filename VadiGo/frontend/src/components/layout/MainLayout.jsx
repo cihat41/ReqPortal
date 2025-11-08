@@ -29,8 +29,18 @@ import {
   AccountCircle,
   Add as AddIcon,
   Notifications as NotificationsIcon,
+  Description as DescriptionIcon,
+  People as PeopleIcon,
+  Assessment as AssessmentIcon,
+  Settings as SettingsIcon,
+  Email as EmailIcon,
+  History as HistoryIcon,
+  AccountTree as AccountTreeIcon,
+  ExpandLess,
+  ExpandMore,
 } from '@mui/icons-material';
 import { useAuth } from '../../contexts/AuthContext';
+import NotificationBell from '../NotificationBell';
 
 const drawerWidth = 240;
 
@@ -42,6 +52,7 @@ const MainLayout = () => {
   const { user, logout } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [anchorEl, setAnchorEl] = useState(null);
+  const [adminMenuOpen, setAdminMenuOpen] = useState(false);
 
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen);
@@ -64,6 +75,16 @@ const MainLayout = () => {
     { text: 'Dashboard', icon: <DashboardIcon />, path: '/dashboard' },
     { text: 'Taleplerim', icon: <AssignmentIcon />, path: '/requests' },
     { text: 'Onaylarım', icon: <CheckCircleIcon />, path: '/approvals' },
+  ];
+
+  const adminMenuItems = [
+    { text: 'Form Şablonları', icon: <DescriptionIcon />, path: '/admin/form-templates' },
+    { text: 'Onay Akışları', icon: <AccountTreeIcon />, path: '/admin/workflows' },
+    { text: 'Kullanıcılar', icon: <PeopleIcon />, path: '/admin/users' },
+    { text: 'Raporlar', icon: <AssessmentIcon />, path: '/admin/reports' },
+    { text: 'Email Şablonları', icon: <EmailIcon />, path: '/admin/email-templates' },
+    { text: 'Email Ayarları', icon: <SettingsIcon />, path: '/admin/email-settings' },
+    { text: 'Audit Logları', icon: <HistoryIcon />, path: '/admin/audit-logs' },
   ];
 
   const isActivePath = (path) => {
@@ -161,6 +182,83 @@ const MainLayout = () => {
             </ListItem>
           );
         })}
+
+        {/* Admin Menüsü */}
+        {user?.roles?.includes('Admin') && (
+          <>
+            <ListItem disablePadding sx={{ mb: 0.5, mt: 2 }}>
+              <ListItemButton
+                onClick={() => setAdminMenuOpen(!adminMenuOpen)}
+                sx={{
+                  borderRadius: 2,
+                  mx: 1,
+                  color: 'white',
+                  '&:hover': {
+                    bgcolor: 'rgba(255, 255, 255, 0.1)',
+                  },
+                }}
+              >
+                <ListItemIcon sx={{ color: 'white', minWidth: 40 }}>
+                  <SettingsIcon />
+                </ListItemIcon>
+                <ListItemText
+                  primary="Yönetim"
+                  primaryTypographyProps={{
+                    fontWeight: 600,
+                    fontSize: '0.875rem',
+                  }}
+                />
+                {adminMenuOpen ? <ExpandLess /> : <ExpandMore />}
+              </ListItemButton>
+            </ListItem>
+
+            {adminMenuOpen && adminMenuItems.map((item) => {
+              const isActive = isActivePath(item.path);
+              return (
+                <ListItem key={item.text} disablePadding sx={{ mb: 0.5, pl: 2 }}>
+                  <ListItemButton
+                    onClick={() => {
+                      navigate(item.path);
+                      if (isMobile) setMobileOpen(false);
+                    }}
+                    selected={isActive}
+                    sx={{
+                      borderRadius: 2,
+                      mx: 1,
+                      color: 'white',
+                      '&.Mui-selected': {
+                        bgcolor: 'rgba(255, 255, 255, 0.2)',
+                        '&:hover': {
+                          bgcolor: 'rgba(255, 255, 255, 0.25)',
+                        },
+                      },
+                      '&:hover': {
+                        bgcolor: 'rgba(255, 255, 255, 0.1)',
+                      },
+                      transition: 'all 0.2s ease-in-out',
+                    }}
+                  >
+                    <ListItemIcon
+                      sx={{
+                        color: 'white',
+                        minWidth: 40,
+                      }}
+                    >
+                      {item.icon}
+                    </ListItemIcon>
+                    <ListItemText
+                      primary={item.text}
+                      primaryTypographyProps={{
+                        fontWeight: isActive ? 600 : 500,
+                        fontSize: '0.875rem',
+                      }}
+                    />
+                  </ListItemButton>
+                </ListItem>
+              );
+            })}
+          </>
+        )}
       </List>
 
       {/* Çıkış Butonu - Mantis Style */}
@@ -213,7 +311,9 @@ const MainLayout = () => {
           </IconButton>
 
           <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1, fontWeight: 600 }}>
-            {menuItems.find((item) => isActivePath(item.path))?.text || 'Dashboard'}
+            {menuItems.find((item) => isActivePath(item.path))?.text ||
+             adminMenuItems.find((item) => isActivePath(item.path))?.text ||
+             'Dashboard'}
           </Typography>
 
           <Stack direction="row" spacing={1} alignItems="center">
@@ -232,9 +332,7 @@ const MainLayout = () => {
             )}
 
             {/* Bildirimler */}
-            <IconButton color="inherit">
-              <NotificationsIcon />
-            </IconButton>
+            <NotificationBell />
 
             {/* Kullanıcı Menüsü */}
             {!isMobile && (

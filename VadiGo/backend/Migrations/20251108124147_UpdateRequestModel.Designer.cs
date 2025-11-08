@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using TalepSistemi.API.Data;
@@ -11,9 +12,11 @@ using TalepSistemi.API.Data;
 namespace TalepSistemi.API.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251108124147_UpdateRequestModel")]
+    partial class UpdateRequestModel
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -42,15 +45,6 @@ namespace TalepSistemi.API.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<bool>("EscalationNotified")
-                        .HasColumnType("boolean");
-
-                    b.Property<int?>("EscalationRoleId")
-                        .HasColumnType("integer");
-
-                    b.Property<int?>("EscalationUserId")
-                        .HasColumnType("integer");
-
                     b.Property<int>("Level")
                         .HasColumnType("integer");
 
@@ -68,114 +62,13 @@ namespace TalepSistemi.API.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
 
-                    b.Property<int?>("TimeoutHours")
-                        .HasColumnType("integer");
-
                     b.HasKey("Id");
 
                     b.HasIndex("ApproverId");
 
-                    b.HasIndex("EscalationRoleId");
-
-                    b.HasIndex("EscalationUserId");
-
                     b.HasIndex("RequestId", "ApproverId");
 
                     b.ToTable("Approvals");
-                });
-
-            modelBuilder.Entity("TalepSistemi.API.Models.ApprovalWorkflow", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("Category")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
-                    b.Property<string>("Conditions")
-                        .HasColumnType("text");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("Description")
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("boolean");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
-
-                    b.Property<int>("Priority")
-                        .HasColumnType("integer");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("ApprovalWorkflows");
-                });
-
-            modelBuilder.Entity("TalepSistemi.API.Models.ApprovalWorkflowStep", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<int?>("EscalationRoleId")
-                        .HasColumnType("integer");
-
-                    b.Property<int?>("EscalationUserId")
-                        .HasColumnType("integer");
-
-                    b.Property<bool>("IsEscalationEnabled")
-                        .HasColumnType("boolean");
-
-                    b.Property<int?>("RoleId")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("StepOrder")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("StepType")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
-
-                    b.Property<int?>("TimeoutHours")
-                        .HasColumnType("integer");
-
-                    b.Property<int?>("UserId")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("WorkflowId")
-                        .HasColumnType("integer");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("EscalationRoleId");
-
-                    b.HasIndex("EscalationUserId");
-
-                    b.HasIndex("RoleId");
-
-                    b.HasIndex("UserId");
-
-                    b.HasIndex("WorkflowId");
-
-                    b.ToTable("ApprovalWorkflowSteps");
                 });
 
             modelBuilder.Entity("TalepSistemi.API.Models.AuditLog", b =>
@@ -237,265 +130,6 @@ namespace TalepSistemi.API.Migrations
                     b.ToTable("AuditLogs");
                 });
 
-            modelBuilder.Entity("TalepSistemi.API.Models.EmailSettings", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<bool>("EnableSsl")
-                        .HasColumnType("boolean");
-
-                    b.Property<string>("FromEmail")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
-
-                    b.Property<string>("FromName")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("boolean");
-
-                    b.Property<string>("SmtpHost")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
-
-                    b.Property<string>("SmtpPassword")
-                        .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)");
-
-                    b.Property<int>("SmtpPort")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("SmtpUsername")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("IsActive");
-
-                    b.ToTable("EmailSettings");
-                });
-
-            modelBuilder.Entity("TalepSistemi.API.Models.EmailTemplate", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("Body")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("EventType")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("boolean");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
-                    b.Property<string>("Subject")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("EmailTemplates");
-                });
-
-            modelBuilder.Entity("TalepSistemi.API.Models.FormField", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("DefaultValue")
-                        .HasColumnType("text");
-
-                    b.Property<string>("DependsOn")
-                        .HasColumnType("text");
-
-                    b.Property<string>("FieldType")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
-
-                    b.Property<int>("FormTemplateId")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("HelpText")
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)");
-
-                    b.Property<bool>("IsRequired")
-                        .HasColumnType("boolean");
-
-                    b.Property<string>("Label")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
-                    b.Property<string>("Options")
-                        .HasColumnType("text");
-
-                    b.Property<int>("Order")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("Placeholder")
-                        .HasColumnType("text");
-
-                    b.Property<string>("ValidationRules")
-                        .HasColumnType("text");
-
-                    b.Property<string>("VisibilityCondition")
-                        .HasColumnType("text");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("FormTemplateId");
-
-                    b.ToTable("FormFields");
-                });
-
-            modelBuilder.Entity("TalepSistemi.API.Models.FormTemplate", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("Category")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<int?>("CreatedBy")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("Description")
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("boolean");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<int>("Version")
-                        .HasColumnType("integer");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("CreatedBy");
-
-                    b.ToTable("FormTemplates");
-                });
-
-            modelBuilder.Entity("TalepSistemi.API.Models.Notification", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<bool>("IsRead")
-                        .HasColumnType("boolean");
-
-                    b.Property<string>("Message")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<DateTime?>("ReadAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<int?>("RelatedApprovalId")
-                        .HasColumnType("integer");
-
-                    b.Property<int?>("RelatedRequestId")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("Title")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
-
-                    b.Property<string>("Type")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
-                    b.Property<int>("UserId")
-                        .HasColumnType("integer");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("CreatedAt");
-
-                    b.HasIndex("IsRead");
-
-                    b.HasIndex("RelatedApprovalId");
-
-                    b.HasIndex("RelatedRequestId");
-
-                    b.HasIndex("UserId");
-
-                    b.ToTable("Notifications");
-                });
-
             modelBuilder.Entity("TalepSistemi.API.Models.Request", b =>
                 {
                     b.Property<int>("Id")
@@ -519,9 +153,6 @@ namespace TalepSistemi.API.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<DateTime?>("DueDate")
-                        .HasColumnType("timestamp with time zone");
-
                     b.Property<decimal?>("EstimatedCost")
                         .HasColumnType("numeric");
 
@@ -538,12 +169,6 @@ namespace TalepSistemi.API.Migrations
 
                     b.Property<int>("RequesterId")
                         .HasColumnType("integer");
-
-                    b.Property<int?>("SlaHours")
-                        .HasColumnType("integer");
-
-                    b.Property<bool>("SlaViolationNotified")
-                        .HasColumnType("boolean");
 
                     b.Property<string>("Status")
                         .IsRequired()
@@ -796,14 +421,6 @@ namespace TalepSistemi.API.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("TalepSistemi.API.Models.Role", "EscalationRole")
-                        .WithMany()
-                        .HasForeignKey("EscalationRoleId");
-
-                    b.HasOne("TalepSistemi.API.Models.User", "EscalationUser")
-                        .WithMany()
-                        .HasForeignKey("EscalationUserId");
-
                     b.HasOne("TalepSistemi.API.Models.Request", "Request")
                         .WithMany("Approvals")
                         .HasForeignKey("RequestId")
@@ -812,50 +429,7 @@ namespace TalepSistemi.API.Migrations
 
                     b.Navigation("Approver");
 
-                    b.Navigation("EscalationRole");
-
-                    b.Navigation("EscalationUser");
-
                     b.Navigation("Request");
-                });
-
-            modelBuilder.Entity("TalepSistemi.API.Models.ApprovalWorkflowStep", b =>
-                {
-                    b.HasOne("TalepSistemi.API.Models.Role", "EscalationRole")
-                        .WithMany()
-                        .HasForeignKey("EscalationRoleId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
-                    b.HasOne("TalepSistemi.API.Models.User", "EscalationUser")
-                        .WithMany()
-                        .HasForeignKey("EscalationUserId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
-                    b.HasOne("TalepSistemi.API.Models.Role", "Role")
-                        .WithMany()
-                        .HasForeignKey("RoleId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
-                    b.HasOne("TalepSistemi.API.Models.User", "User")
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
-                    b.HasOne("TalepSistemi.API.Models.ApprovalWorkflow", "Workflow")
-                        .WithMany("Steps")
-                        .HasForeignKey("WorkflowId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("EscalationRole");
-
-                    b.Navigation("EscalationUser");
-
-                    b.Navigation("Role");
-
-                    b.Navigation("User");
-
-                    b.Navigation("Workflow");
                 });
 
             modelBuilder.Entity("TalepSistemi.API.Models.AuditLog", b =>
@@ -863,52 +437,6 @@ namespace TalepSistemi.API.Migrations
                     b.HasOne("TalepSistemi.API.Models.User", "User")
                         .WithMany()
                         .HasForeignKey("UserId");
-
-                    b.Navigation("User");
-                });
-
-            modelBuilder.Entity("TalepSistemi.API.Models.FormField", b =>
-                {
-                    b.HasOne("TalepSistemi.API.Models.FormTemplate", "FormTemplate")
-                        .WithMany("Fields")
-                        .HasForeignKey("FormTemplateId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("FormTemplate");
-                });
-
-            modelBuilder.Entity("TalepSistemi.API.Models.FormTemplate", b =>
-                {
-                    b.HasOne("TalepSistemi.API.Models.User", "Creator")
-                        .WithMany()
-                        .HasForeignKey("CreatedBy")
-                        .OnDelete(DeleteBehavior.SetNull);
-
-                    b.Navigation("Creator");
-                });
-
-            modelBuilder.Entity("TalepSistemi.API.Models.Notification", b =>
-                {
-                    b.HasOne("TalepSistemi.API.Models.Approval", "RelatedApproval")
-                        .WithMany()
-                        .HasForeignKey("RelatedApprovalId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
-                    b.HasOne("TalepSistemi.API.Models.Request", "RelatedRequest")
-                        .WithMany()
-                        .HasForeignKey("RelatedRequestId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
-                    b.HasOne("TalepSistemi.API.Models.User", "User")
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("RelatedApproval");
-
-                    b.Navigation("RelatedRequest");
 
                     b.Navigation("User");
                 });
@@ -979,16 +507,6 @@ namespace TalepSistemi.API.Migrations
                     b.Navigation("Role");
 
                     b.Navigation("User");
-                });
-
-            modelBuilder.Entity("TalepSistemi.API.Models.ApprovalWorkflow", b =>
-                {
-                    b.Navigation("Steps");
-                });
-
-            modelBuilder.Entity("TalepSistemi.API.Models.FormTemplate", b =>
-                {
-                    b.Navigation("Fields");
                 });
 
             modelBuilder.Entity("TalepSistemi.API.Models.Request", b =>

@@ -19,6 +19,9 @@ import {
   Delete as DeleteIcon,
 } from '@mui/icons-material';
 import { requestsAPI } from '../services/api';
+import RequestAttachments from '../components/RequestAttachments';
+import RequestComments from '../components/RequestComments';
+import SlaIndicator from '../components/SlaIndicator';
 
 const statusColors = {
   Draft: 'default',
@@ -173,10 +176,13 @@ const RequestDetail = () => {
           <Typography variant="h4" sx={{ fontSize: { xs: '1.5rem', sm: '2.125rem' } }}>
             {request.title}
           </Typography>
-          <Chip
-            label={statusLabels[request.status] || request.status}
-            color={statusColors[request.status] || 'default'}
-          />
+          <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+            <Chip
+              label={statusLabels[request.status] || request.status}
+              color={statusColors[request.status] || 'default'}
+            />
+            <SlaIndicator request={request} />
+          </Box>
         </Box>
 
         <Grid container spacing={2} sx={{ mt: 1 }}>
@@ -213,16 +219,18 @@ const RequestDetail = () => {
             </Box>
           </Grid>
 
-          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-            <Box sx={{ p: 2, bgcolor: '#f8fafc', borderRadius: 2 }}>
-              <Typography variant="caption" color="text.secondary" fontWeight={600}>
-                Son Güncelleme
-              </Typography>
-              <Typography variant="body2" fontWeight={500} sx={{ mt: 0.5 }}>
-                {new Date(request.updatedAt).toLocaleString('tr-TR')}
-              </Typography>
-            </Box>
-          </Grid>
+          {request.updatedAt && (
+            <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+              <Box sx={{ p: 2, bgcolor: '#f8fafc', borderRadius: 2 }}>
+                <Typography variant="caption" color="text.secondary" fontWeight={600}>
+                  Son Güncelleme
+                </Typography>
+                <Typography variant="body2" fontWeight={500} sx={{ mt: 0.5 }}>
+                  {new Date(request.updatedAt).toLocaleString('tr-TR')}
+                </Typography>
+              </Box>
+            </Grid>
+          )}
 
           {request.estimatedCost && (
             <Grid size={{ xs: 12, sm: 6, md: 3 }}>
@@ -265,6 +273,17 @@ const RequestDetail = () => {
           )}
         </Grid>
       </Paper>
+
+      <Box sx={{ mb: 3 }}>
+        <RequestAttachments
+          requestId={request.id}
+          canUpload={request.status === 'Draft' || request.status === 'Submitted'}
+        />
+      </Box>
+
+      <Box sx={{ mb: 3 }}>
+        <RequestComments requestId={request.id} />
+      </Box>
 
       {request.approvals && request.approvals.length > 0 && (
         <Paper

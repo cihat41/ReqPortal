@@ -21,8 +21,6 @@ public class Approval
 
     public int Level { get; set; } = 1; // Onay seviyesi
 
-    public string? Comment { get; set; }
-
     public string? Comments { get; set; } // Onaylayıcının yorumları
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
@@ -31,9 +29,19 @@ public class Approval
 
     public DateTime? ApprovedAt { get; set; }
 
+    public int? TimeoutHours { get; set; }
+
+    public int? EscalationRoleId { get; set; }
+
+    public int? EscalationUserId { get; set; }
+
+    public bool EscalationNotified { get; set; } = false;
+
     // Navigation Properties
     public Request Request { get; set; } = null!;
     public User Approver { get; set; } = null!;
+    public Role? EscalationRole { get; set; }
+    public User? EscalationUser { get; set; }
 }
 
 // Onay durumları

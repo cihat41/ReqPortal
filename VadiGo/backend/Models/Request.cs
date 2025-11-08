@@ -47,6 +47,12 @@ public class Request
 
     public DateTime? CompletedAt { get; set; }
 
+    public DateTime? DueDate { get; set; }
+
+    public int? SlaHours { get; set; }
+
+    public bool SlaViolationNotified { get; set; } = false;
+
     // Navigation Properties
     public User Requester { get; set; } = null!;
     public ICollection<Approval> Approvals { get; set; } = new List<Approval>();

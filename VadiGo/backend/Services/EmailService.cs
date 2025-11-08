@@ -10,42 +10,81 @@ public class EmailService : IEmailService
     private readonly IConfiguration _configuration;
     private readonly ApplicationDbContext _context;
     private readonly ILogger<EmailService> _logger;
+    private readonly ISettingsService _settingsService;
 
     public EmailService(
         IConfiguration configuration,
         ApplicationDbContext context,
-        ILogger<EmailService> logger)
+        ILogger<EmailService> logger,
+        ISettingsService settingsService)
     {
         _configuration = configuration;
         _context = context;
         _logger = logger;
+        _settingsService = settingsService;
     }
 
     public async Task SendEmailAsync(string to, string subject, string body)
     {
+        await SendEmailAsync(new List<string> { to }, subject, body);
+    }
+
+    public async Task SendEmailAsync(List<string> to, string subject, string body)
+    {
         try
         {
-            var smtpSettings = _configuration.GetSection("EmailSettings");
-            var smtpHost = smtpSettings["SmtpHost"];
-            var smtpPort = int.Parse(smtpSettings["SmtpPort"] ?? "587");
-            var smtpUsername = smtpSettings["SmtpUsername"];
-            var smtpPassword = smtpSettings["SmtpPassword"];
-            var fromEmail = smtpSettings["FromEmail"];
-            var fromName = smtpSettings["FromName"];
+            // Önce veritabanından ayarları al
+            var dbSettings = await _settingsService.GetEmailSettingsAsync();
+
+            string? smtpHost;
+            int smtpPort;
+            string? smtpUsername;
+            string? smtpPassword;
+            string? fromEmail;
+            string? fromName;
+            bool enableSsl;
+
+            if (dbSettings != null)
+            {
+                // Veritabanından ayarları kullan
+                smtpHost = dbSettings.SmtpHost;
+                smtpPort = dbSettings.SmtpPort;
+                smtpUsername = dbSettings.SmtpUsername;
+                smtpPassword = dbSettings.SmtpPassword;
+                fromEmail = dbSettings.FromEmail;
+                fromName = dbSettings.FromName;
+                enableSsl = dbSettings.EnableSsl;
+
+                _logger.LogInformation("Email ayarları veritabanından alındı");
+            }
+            else
+            {
+                // Fallback: appsettings.json'dan ayarları kullan
+                var smtpSettings = _configuration.GetSection("EmailSettings");
+                smtpHost = smtpSettings["SmtpHost"];
+                smtpPort = int.Parse(smtpSettings["SmtpPort"] ?? "587");
+                smtpUsername = smtpSettings["SmtpUsername"];
+                smtpPassword = smtpSettings["SmtpPassword"];
+                fromEmail = smtpSettings["FromEmail"];
+                fromName = smtpSettings["FromName"];
+                enableSsl = true;
+
+                _logger.LogWarning("Email ayarları veritabanında bulunamadı, appsettings.json kullanılıyor");
+            }
 
             // If SMTP is not configured, just log the email
             if (string.IsNullOrEmpty(smtpHost))
             {
                 _logger.LogInformation(
                     "Email would be sent to {To} with subject '{Subject}'. Body: {Body}",
-                    to, subject, body);
+                    string.Join(", ", to), subject, body);
                 return;
             }
 
             using var client = new SmtpClient(smtpHost, smtpPort)
             {
                 Credentials = new NetworkCredential(smtpUsername, smtpPassword),
-                EnableSsl = true
+                EnableSsl = enableSsl
             };
 
             var mailMessage = new MailMessage
@@ -55,16 +94,46 @@ public class EmailService : IEmailService
                 Body = body,
                 IsBodyHtml = true
             };
-            mailMessage.To.Add(to);
+
+            foreach (var recipient in to)
+            {
+                mailMessage.To.Add(recipient);
+            }
 
             await client.SendMailAsync(mailMessage);
-            _logger.LogInformation("Email sent successfully to {To}", to);
+            _logger.LogInformation("Email sent successfully to {To}", string.Join(", ", to));
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to send email to {To}", to);
+            _logger.LogError(ex, "Failed to send email to {To}", string.Join(", ", to));
             // Don't throw - email failures shouldn't break the application
         }
+    }
+
+    public async Task SendTemplatedEmailAsync(string to, string templateName, Dictionary<string, string> variables)
+    {
+        var template = await _context.EmailTemplates
+            .FirstOrDefaultAsync(t => t.Name == templateName && t.IsActive);
+
+        if (template == null)
+        {
+            _logger.LogWarning("Email template '{TemplateName}' not found", templateName);
+            return;
+        }
+
+        var subject = ReplaceVariables(template.Subject, variables);
+        var body = ReplaceVariables(template.Body, variables);
+
+        await SendEmailAsync(to, subject, body);
+    }
+
+    private string ReplaceVariables(string text, Dictionary<string, string> variables)
+    {
+        foreach (var variable in variables)
+        {
+            text = text.Replace(variable.Key, variable.Value);
+        }
+        return text;
     }
 
     public async Task SendRequestSubmittedNotificationAsync(int requestId)

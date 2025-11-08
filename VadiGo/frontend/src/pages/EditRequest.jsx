@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import {
   Container,
   Typography,
@@ -12,7 +12,7 @@ import {
   Alert,
   CircularProgress,
 } from '@mui/material';
-import { Save as SaveIcon, Send as SendIcon } from '@mui/icons-material';
+import { Save as SaveIcon, Send as SendIcon, ArrowBack as ArrowBackIcon } from '@mui/icons-material';
 import { requestsAPI } from '../services/api';
 
 const categories = [
@@ -31,9 +31,11 @@ const priorities = [
   { value: 'Critical', label: 'Kritik' },
 ];
 
-const CreateRequest = () => {
+const EditRequest = () => {
+  const { id } = useParams();
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [formData, setFormData] = useState({
     title: '',
@@ -42,8 +44,34 @@ const CreateRequest = () => {
     priority: 'Medium',
     estimatedCost: '',
     justification: '',
-    slaHours: '',
   });
+
+  useEffect(() => {
+    fetchRequest();
+  }, [id]);
+
+  const fetchRequest = async () => {
+    try {
+      setLoading(true);
+      setError('');
+      const response = await requestsAPI.getById(id);
+      const request = response.data;
+      
+      setFormData({
+        title: request.title || '',
+        description: request.description || '',
+        category: request.category || '',
+        priority: request.priority || 'Medium',
+        estimatedCost: request.estimatedCost || '',
+        justification: request.justification || '',
+      });
+    } catch (err) {
+      setError('Talep yüklenirken bir hata oluştu.');
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleChange = (field, value) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -51,42 +79,55 @@ const CreateRequest = () => {
 
   const handleSubmit = async (isDraft = false) => {
     try {
-      setLoading(true);
+      setSaving(true);
       setError('');
 
       const requestData = {
         title: formData.title,
         description: formData.description,
-        type: formData.category, // Type ve Category aynı değer
+        type: formData.category,
         category: formData.category,
         priority: formData.priority,
         justification: formData.justification,
         estimatedCost: formData.estimatedCost ? parseFloat(formData.estimatedCost) : null,
-        slaHours: formData.slaHours ? parseInt(formData.slaHours) : null,
-        saveAsDraft: isDraft,
       };
 
-      await requestsAPI.create(requestData);
-      navigate('/requests');
+      await requestsAPI.update(id, requestData);
+      navigate(`/requests/${id}`);
     } catch (err) {
-      setError(err.response?.data?.message || 'Talep oluşturulurken bir hata oluştu.');
+      setError(err.response?.data?.message || 'Talep güncellenirken bir hata oluştu.');
       console.error(err);
     } finally {
-      setLoading(false);
+      setSaving(false);
     }
   };
 
   const isValid = formData.title && formData.description && formData.category;
 
+  if (loading) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
+
   return (
     <Container maxWidth="lg" sx={{ mt: { xs: 2, sm: 3, md: 4 }, mb: 4, px: { xs: 2, sm: 3 } }}>
       {/* Başlık */}
       <Box sx={{ mb: 4 }}>
+        <Button
+          startIcon={<ArrowBackIcon />}
+          onClick={() => navigate(`/requests/${id}`)}
+          sx={{ mb: 2 }}
+        >
+          Geri Dön
+        </Button>
         <Typography variant="h4" gutterBottom fontWeight={600} sx={{ fontSize: { xs: '1.75rem', sm: '2.125rem' } }}>
-          Yeni Talep Oluştur
+          Talebi Düzenle
         </Typography>
         <Typography variant="body2" color="text.secondary">
-          Lütfen talep bilgilerinizi eksiksiz doldurun
+          Talep bilgilerinizi güncelleyin
         </Typography>
       </Box>
 
@@ -237,28 +278,6 @@ const CreateRequest = () => {
             />
           </Grid>
 
-          {/* SLA Süresi */}
-          <Grid size={{ xs: 12, md: 6 }}>
-            <Typography variant="subtitle2" color="text.secondary" gutterBottom fontWeight={600}>
-              SLA Süresi (Saat)
-            </Typography>
-            <TextField
-              fullWidth
-              type="number"
-              placeholder="24"
-              value={formData.slaHours}
-              onChange={(e) => handleChange('slaHours', e.target.value)}
-              slotProps={{
-                htmlInput: { min: 1, step: 1 }
-              }}
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  backgroundColor: 'background.paper',
-                },
-              }}
-            />
-          </Grid>
-
           {/* Butonlar */}
           <Grid size={{ xs: 12 }}>
             <Box
@@ -274,8 +293,8 @@ const CreateRequest = () => {
             >
               <Button
                 variant="outlined"
-                onClick={() => navigate('/requests')}
-                disabled={loading}
+                onClick={() => navigate(`/requests/${id}`)}
+                disabled={saving}
                 sx={{
                   minWidth: { xs: '100%', sm: 120 },
                   py: 1.5,
@@ -285,31 +304,17 @@ const CreateRequest = () => {
                 İptal
               </Button>
               <Button
-                variant="outlined"
-                color="secondary"
-                startIcon={<SaveIcon />}
-                onClick={() => handleSubmit(true)}
-                disabled={loading || !formData.title}
-                sx={{
-                  minWidth: { xs: '100%', sm: 200 },
-                  py: 1.5,
-                  fontSize: '1rem',
-                }}
-              >
-                Taslak Olarak Kaydet
-              </Button>
-              <Button
                 variant="contained"
-                startIcon={loading ? <CircularProgress size={20} color="inherit" /> : <SendIcon />}
+                startIcon={saving ? <CircularProgress size={20} color="inherit" /> : <SaveIcon />}
                 onClick={() => handleSubmit(false)}
-                disabled={loading || !isValid}
+                disabled={saving || !isValid}
                 sx={{
                   minWidth: { xs: '100%', sm: 120 },
                   py: 1.5,
                   fontSize: '1rem',
                 }}
               >
-                Gönder
+                Kaydet
               </Button>
             </Box>
           </Grid>
@@ -319,5 +324,5 @@ const CreateRequest = () => {
   );
 };
 
-export default CreateRequest;
+export default EditRequest;
 
