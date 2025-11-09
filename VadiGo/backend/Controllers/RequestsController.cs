@@ -5,6 +5,7 @@ using System.Security.Claims;
 using TalepSistemi.API.Data;
 using TalepSistemi.API.DTOs;
 using TalepSistemi.API.Models;
+using TalepSistemi.API.Services;
 
 namespace TalepSistemi.API.Controllers;
 
@@ -15,17 +16,74 @@ public class RequestsController : ControllerBase
 {
     private readonly ApplicationDbContext _context;
     private readonly ILogger<RequestsController> _logger;
+    private readonly IEmailService _emailService;
+    private readonly IApprovalWorkflowService _workflowService;
 
-    public RequestsController(ApplicationDbContext context, ILogger<RequestsController> logger)
+    public RequestsController(
+        ApplicationDbContext context,
+        ILogger<RequestsController> logger,
+        IEmailService emailService,
+        IApprovalWorkflowService workflowService)
     {
         _context = context;
         _logger = logger;
+        _emailService = emailService;
+        _workflowService = workflowService;
     }
 
     private int GetCurrentUserId()
     {
         var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         return int.Parse(userIdClaim ?? "0");
+    }
+
+    private async Task CreateDefaultApprovalAsync(Request request, User? requester)
+    {
+        var approver = await _context.UserRoles
+            .Include(ur => ur.User)
+            .Where(ur => ur.RoleId == 4) // Admin rolü
+            .Select(ur => ur.User)
+            .FirstOrDefaultAsync();
+
+        if (approver != null)
+        {
+            var approval = new Approval
+            {
+                RequestId = request.Id,
+                ApproverId = approver.Id,
+                Status = ApprovalStatus.Pending,
+                Level = 1,
+                Order = 1,
+                CreatedAt = DateTime.UtcNow
+            };
+
+            _context.Approvals.Add(approval);
+
+            // Send email notification to approver
+            try
+            {
+                await _emailService.SendEmailAsync(
+                    approver.Email,
+                    $"Yeni Talep Onayı Bekliyor: {request.Title}",
+                    $@"Merhaba {approver.FirstName},
+
+{requester!.FirstName} {requester.LastName} tarafından yeni bir talep oluşturuldu ve onayınızı bekliyor.
+
+Talep Başlığı: {request.Title}
+Kategori: {request.Category}
+Öncelik: {request.Priority}
+Açıklama: {request.Description}
+
+Talebi incelemek için sisteme giriş yapınız.
+
+İyi çalışmalar."
+                );
+            }
+            catch (Exception emailEx)
+            {
+                _logger.LogError(emailEx, "Email gönderilemedi");
+            }
+        }
     }
 
     [HttpGet]
@@ -92,6 +150,7 @@ public class RequestsController : ControllerBase
             var userId = GetCurrentUserId();
             var request = await _context.Requests
                 .Include(r => r.Requester)
+                .Include(r => r.Attachments)
                 .FirstOrDefaultAsync(r => r.Id == id && r.RequesterId == userId);
 
             if (request == null)
@@ -118,7 +177,15 @@ public class RequestsController : ControllerBase
                 SlaHours = request.SlaHours,
                 CreatedAt = request.CreatedAt,
                 SubmittedAt = request.SubmittedAt,
-                CompletedAt = request.CompletedAt
+                CompletedAt = request.CompletedAt,
+                Attachments = request.Attachments?.Select(a => new AttachmentDto
+                {
+                    Id = a.Id,
+                    FileName = a.FileName,
+                    FileSize = a.FileSize,
+                    ContentType = a.ContentType,
+                    UploadedAt = a.UploadedAt
+                }).ToList()
             };
 
             return Ok(requestDto);
@@ -159,34 +226,39 @@ public class RequestsController : ControllerBase
             _context.Requests.Add(request);
             await _context.SaveChangesAsync();
 
-            // Talep gönderildiyse onay kaydı oluştur (basit versiyon)
+            var requester = await _context.Users.FindAsync(userId);
+
+            // Talep gönderildiyse onay kaydı oluştur
             if (!createRequestDto.SaveAsDraft)
             {
-                // Varsayılan olarak Admin rolündeki ilk kullanıcıyı onaycı olarak ata
-                var approver = await _context.UserRoles
-                    .Include(ur => ur.User)
-                    .Where(ur => ur.RoleId == 4) // Admin rolü
-                    .Select(ur => ur.User)
-                    .FirstOrDefaultAsync();
+                request.Status = RequestStatus.PendingApproval;
 
-                if (approver != null)
+                // FormTemplate'in DefaultWorkflowId'sine göre approval oluştur
+                if (createRequestDto.FormTemplateId.HasValue)
                 {
-                    var approval = new Approval
+                    var formTemplate = await _context.FormTemplates
+                        .Include(ft => ft.DefaultWorkflow)
+                        .FirstOrDefaultAsync(ft => ft.Id == createRequestDto.FormTemplateId.Value);
+
+                    if (formTemplate?.DefaultWorkflowId.HasValue == true)
                     {
-                        RequestId = request.Id,
-                        ApproverId = approver.Id,
-                        Status = ApprovalStatus.Pending,
-                        Order = 1,
-                        CreatedAt = DateTime.UtcNow
-                    };
-
-                    _context.Approvals.Add(approval);
-                    request.Status = RequestStatus.PendingApproval;
-                    await _context.SaveChangesAsync();
+                        // Workflow servisi ile approval'ları oluştur
+                        await _workflowService.CreateApprovalsForRequestAsync(request.Id, formTemplate.DefaultWorkflowId.Value);
+                    }
+                    else
+                    {
+                        // Workflow yoksa, varsayılan olarak Admin rolündeki ilk kullanıcıyı onaycı olarak ata
+                        await CreateDefaultApprovalAsync(request, requester);
+                    }
                 }
-            }
+                else
+                {
+                    // FormTemplate yoksa, varsayılan approval oluştur
+                    await CreateDefaultApprovalAsync(request, requester);
+                }
 
-            var requester = await _context.Users.FindAsync(userId);
+                await _context.SaveChangesAsync();
+            }
 
             var requestDto = new RequestDto
             {

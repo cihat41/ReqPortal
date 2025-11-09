@@ -42,9 +42,14 @@ public class ApprovalWorkflowStep
 
     public int StepOrder { get; set; }
 
+    public int Level { get; set; } = 1; // Onay seviyesi - aynı level'daki step'ler paralel çalışır
+
     [Required]
     [MaxLength(50)]
     public string StepType { get; set; } = StepTypes.Sequential; // Sequential or Parallel
+
+    [MaxLength(50)]
+    public string ApprovalStrategy { get; set; } = ApprovalStrategies.All; // Any, All, Majority (paralel için)
 
     public int? RoleId { get; set; }
 
@@ -70,5 +75,12 @@ public static class StepTypes
 {
     public const string Sequential = "sequential";
     public const string Parallel = "parallel";
+}
+
+public static class ApprovalStrategies
+{
+    public const string Any = "any"; // Herhangi biri onaylayınca geçer
+    public const string All = "all"; // Hepsi onaylamalı
+    public const string Majority = "majority"; // Çoğunluk onaylamalı (50%+1)
 }
 

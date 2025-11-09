@@ -24,8 +24,8 @@ import {
 import api from '../services/api';
 
 const STEP_TYPES = {
-  Sequential: 'Sıralı',
-  Parallel: 'Paralel',
+  sequential: 'Sıralı',
+  parallel: 'Paralel',
 };
 
 export default function WorkflowBuilder() {
@@ -72,7 +72,28 @@ export default function WorkflowBuilder() {
   const loadWorkflow = async () => {
     try {
       const response = await api.get(`/approvalworkflows/${id}`);
-      setFormData(response.data);
+      const workflow = response.data;
+
+      // Map backend response to frontend format
+      setFormData({
+        name: workflow.name,
+        description: workflow.description || '',
+        category: workflow.category,
+        conditions: workflow.conditions || '',
+        isActive: workflow.isActive,
+        priority: workflow.priority,
+        steps: workflow.steps.map(step => ({
+          id: step.id,
+          stepOrder: step.stepOrder,
+          stepType: step.stepType,
+          roleId: step.roleId,
+          userId: step.userId,
+          timeoutHours: step.timeoutHours,
+          isEscalationEnabled: step.isEscalationEnabled,
+          escalationRoleId: step.escalationRoleId,
+          escalationUserId: step.escalationUserId,
+        })),
+      });
     } catch (error) {
       console.error('İş akışı yüklenemedi:', error);
     }
@@ -85,7 +106,7 @@ export default function WorkflowBuilder() {
         ...formData.steps,
         {
           stepOrder: formData.steps.length + 1,
-          stepType: 'Sequential',
+          stepType: 'sequential',
           roleId: null,
           userId: null,
           timeoutHours: null,

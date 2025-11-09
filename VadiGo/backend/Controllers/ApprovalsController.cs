@@ -5,6 +5,7 @@ using System.Security.Claims;
 using TalepSistemi.API.Data;
 using TalepSistemi.API.DTOs;
 using TalepSistemi.API.Models;
+using TalepSistemi.API.Services;
 
 namespace TalepSistemi.API.Controllers;
 
@@ -14,10 +15,20 @@ namespace TalepSistemi.API.Controllers;
 public class ApprovalsController : ControllerBase
 {
     private readonly ApplicationDbContext _context;
+    private readonly IEmailService _emailService;
+    private readonly ILogger<ApprovalsController> _logger;
+    private readonly IApprovalWorkflowService _workflowService;
 
-    public ApprovalsController(ApplicationDbContext context)
+    public ApprovalsController(
+        ApplicationDbContext context,
+        IEmailService emailService,
+        ILogger<ApprovalsController> logger,
+        IApprovalWorkflowService workflowService)
     {
         _context = context;
+        _emailService = emailService;
+        _logger = logger;
+        _workflowService = workflowService;
     }
 
     // GET: api/approvals/pending
@@ -112,25 +123,12 @@ public class ApprovalsController : ControllerBase
             return BadRequest(new { message = "Bu onay zaten işlenmiş." });
         }
 
-        approval.Status = ApprovalStatus.Approved;
-        approval.Comments = dto.Comments;
-        approval.ApprovedAt = DateTime.UtcNow;
+        // Workflow servisi ile onay işlemini yap
+        var success = await _workflowService.ProcessApprovalAsync(id, ApprovalStatus.Approved, dto.Comments);
 
-        // Check if there are more approval levels
-        var nextApproval = await _context.Approvals
-            .Where(a => a.RequestId == approval.RequestId && a.Level > approval.Level)
-            .OrderBy(a => a.Level)
-            .FirstOrDefaultAsync();
-
-        if (nextApproval == null)
+        if (!success)
         {
-            // No more approvals needed, mark request as approved
-            approval.Request.Status = RequestStatus.Approved;
-        }
-        else
-        {
-            // Keep request in PendingApproval status for next level
-            approval.Request.Status = RequestStatus.PendingApproval;
+            return StatusCode(500, new { message = "Onay işlemi sırasında bir hata oluştu." });
         }
 
         // Create audit log
@@ -144,7 +142,6 @@ public class ApprovalsController : ControllerBase
             Timestamp = DateTime.UtcNow
         };
         _context.AuditLogs.Add(auditLog);
-
         await _context.SaveChangesAsync();
 
         return Ok(new { message = "Talep onaylandı." });
@@ -170,12 +167,13 @@ public class ApprovalsController : ControllerBase
             return BadRequest(new { message = "Bu onay zaten işlenmiş." });
         }
 
-        approval.Status = ApprovalStatus.Rejected;
-        approval.Comments = dto.Comments;
-        approval.ApprovedAt = DateTime.UtcNow;
+        // Workflow servisi ile red işlemini yap
+        var success = await _workflowService.ProcessApprovalAsync(id, ApprovalStatus.Rejected, dto.Comments);
 
-        // Mark request as rejected
-        approval.Request.Status = RequestStatus.Rejected;
+        if (!success)
+        {
+            return StatusCode(500, new { message = "Red işlemi sırasında bir hata oluştu." });
+        }
 
         // Create audit log
         var auditLog = new AuditLog
@@ -188,7 +186,6 @@ public class ApprovalsController : ControllerBase
             Timestamp = DateTime.UtcNow
         };
         _context.AuditLogs.Add(auditLog);
-
         await _context.SaveChangesAsync();
 
         return Ok(new { message = "Talep reddedildi." });

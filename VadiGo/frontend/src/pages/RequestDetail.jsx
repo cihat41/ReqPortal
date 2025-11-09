@@ -21,6 +21,7 @@ import {
   ArrowBack as ArrowBackIcon,
   Edit as EditIcon,
   Delete as DeleteIcon,
+  AttachFile as AttachFileIcon,
 } from '@mui/icons-material';
 import { requestsAPI, formTemplatesAPI } from '../services/api';
 import RequestAttachments from '../components/RequestAttachments';
@@ -53,7 +54,7 @@ const priorityLabels = {
 };
 
 // Helper function to format field values
-const formatFieldValue = (field, value) => {
+const formatFieldValue = (field, value, attachments = []) => {
   if (!value && value !== 0 && value !== false) return '-';
 
   switch (field.fieldType) {
@@ -74,6 +75,59 @@ const formatFieldValue = (field, value) => {
 
     case 'number':
       return new Intl.NumberFormat('tr-TR').format(value);
+
+    case 'file':
+      // Find matching attachment by filename
+      const attachment = attachments.find(att => att.fileName === value);
+      if (attachment) {
+        const handleDownload = async () => {
+          try {
+            const token = localStorage.getItem('token');
+            const response = await fetch(`/api/attachments/download/${attachment.id}`, {
+              headers: {
+                'Authorization': `Bearer ${token}`
+              }
+            });
+
+            if (!response.ok) {
+              throw new Error('Download failed');
+            }
+
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = attachment.fileName;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+          } catch (error) {
+            console.error('Download error:', error);
+            alert('Dosya indirilemedi');
+          }
+        };
+
+        return (
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <AttachFileIcon fontSize="small" color="primary" />
+            <Button
+              variant="text"
+              size="small"
+              onClick={handleDownload}
+              sx={{ textTransform: 'none', p: 0, minWidth: 'auto' }}
+            >
+              {value}
+            </Button>
+          </Box>
+        );
+      }
+      return (
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <AttachFileIcon fontSize="small" />
+          <Typography variant="body2">{value}</Typography>
+        </Box>
+      );
 
     default:
       return value.toString();
@@ -347,7 +401,7 @@ const RequestDetail = () => {
                               {field.label}
                             </TableCell>
                             <TableCell sx={{ borderBottom: '1px solid #e0e0e0' }}>
-                              {formatFieldValue(field, value)}
+                              {formatFieldValue(field, value, request?.attachments || [])}
                             </TableCell>
                           </TableRow>
                         );

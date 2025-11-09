@@ -20,6 +20,16 @@ public class RequestDto
     public DateTime CreatedAt { get; set; }
     public DateTime? SubmittedAt { get; set; }
     public DateTime? CompletedAt { get; set; }
+    public List<AttachmentDto>? Attachments { get; set; }
+}
+
+public class AttachmentDto
+{
+    public int Id { get; set; }
+    public string FileName { get; set; } = string.Empty;
+    public long FileSize { get; set; }
+    public string? ContentType { get; set; }
+    public DateTime UploadedAt { get; set; }
 }
 
 public class CreateRequestDto

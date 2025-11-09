@@ -1014,12 +1014,241 @@ public static class DbInitializer
 
         await context.SaveChangesAsync();
 
-        logger.LogInformation("✅ 5 onay akışı başarıyla oluşturuldu!");
+        // ========================================
+        // TEST WORKFLOW'LARI - PARALEL ONAY TESTLERİ
+        // ========================================
+
+        // 6. Paralel Onay - Any (Herhangi Biri Yeterli)
+        var parallelAnyWorkflow = new ApprovalWorkflow
+        {
+            Name = "Test: Paralel Onay - Herhangi Biri",
+            Description = "3 kişiden herhangi biri onaylayınca geçer (Any stratejisi)",
+            Category = "Test",
+            IsActive = true,
+            Priority = 10,
+            CreatedAt = DateTime.UtcNow
+        };
+        await context.ApprovalWorkflows.AddAsync(parallelAnyWorkflow);
+        await context.SaveChangesAsync();
+
+        var parallelAnySteps = new[]
+        {
+            new ApprovalWorkflowStep
+            {
+                WorkflowId = parallelAnyWorkflow.Id,
+                StepOrder = 1,
+                Level = 1,
+                StepType = StepTypes.Parallel,
+                ApprovalStrategy = ApprovalStrategies.Any,
+                UserId = 3 // Deniz Kaya
+            },
+            new ApprovalWorkflowStep
+            {
+                WorkflowId = parallelAnyWorkflow.Id,
+                StepOrder = 2,
+                Level = 1,
+                StepType = StepTypes.Parallel,
+                ApprovalStrategy = ApprovalStrategies.Any,
+                UserId = 6 // Gökhan Arslan
+            },
+            new ApprovalWorkflowStep
+            {
+                WorkflowId = parallelAnyWorkflow.Id,
+                StepOrder = 3,
+                Level = 1,
+                StepType = StepTypes.Parallel,
+                ApprovalStrategy = ApprovalStrategies.Any,
+                UserId = 9 // Kemal Çelik
+            }
+        };
+        await context.ApprovalWorkflowSteps.AddRangeAsync(parallelAnySteps);
+
+        // 7. Paralel Onay - All (Hepsi Gerekli)
+        var parallelAllWorkflow = new ApprovalWorkflow
+        {
+            Name = "Test: Paralel Onay - Hepsi Gerekli",
+            Description = "3 kişinin hepsi onaylamalı (All stratejisi)",
+            Category = "Test",
+            IsActive = true,
+            Priority = 10,
+            CreatedAt = DateTime.UtcNow
+        };
+        await context.ApprovalWorkflows.AddAsync(parallelAllWorkflow);
+        await context.SaveChangesAsync();
+
+        var parallelAllSteps = new[]
+        {
+            new ApprovalWorkflowStep
+            {
+                WorkflowId = parallelAllWorkflow.Id,
+                StepOrder = 1,
+                Level = 1,
+                StepType = StepTypes.Parallel,
+                ApprovalStrategy = ApprovalStrategies.All,
+                UserId = 4 // Ece Demir
+            },
+            new ApprovalWorkflowStep
+            {
+                WorkflowId = parallelAllWorkflow.Id,
+                StepOrder = 2,
+                Level = 1,
+                StepType = StepTypes.Parallel,
+                ApprovalStrategy = ApprovalStrategies.All,
+                UserId = 7 // Hakan Özdemir
+            },
+            new ApprovalWorkflowStep
+            {
+                WorkflowId = parallelAllWorkflow.Id,
+                StepOrder = 3,
+                Level = 1,
+                StepType = StepTypes.Parallel,
+                ApprovalStrategy = ApprovalStrategies.All,
+                UserId = 10 // Leyla Şahin
+            }
+        };
+        await context.ApprovalWorkflowSteps.AddRangeAsync(parallelAllSteps);
+
+        // 8. Paralel Onay - Majority (Çoğunluk)
+        var parallelMajorityWorkflow = new ApprovalWorkflow
+        {
+            Name = "Test: Paralel Onay - Çoğunluk",
+            Description = "5 kişiden 3'ü onaylayınca geçer (Majority stratejisi)",
+            Category = "Test",
+            IsActive = true,
+            Priority = 10,
+            CreatedAt = DateTime.UtcNow
+        };
+        await context.ApprovalWorkflows.AddAsync(parallelMajorityWorkflow);
+        await context.SaveChangesAsync();
+
+        var parallelMajoritySteps = new[]
+        {
+            new ApprovalWorkflowStep
+            {
+                WorkflowId = parallelMajorityWorkflow.Id,
+                StepOrder = 1,
+                Level = 1,
+                StepType = StepTypes.Parallel,
+                ApprovalStrategy = ApprovalStrategies.Majority,
+                UserId = 3 // Deniz Kaya
+            },
+            new ApprovalWorkflowStep
+            {
+                WorkflowId = parallelMajorityWorkflow.Id,
+                StepOrder = 2,
+                Level = 1,
+                StepType = StepTypes.Parallel,
+                ApprovalStrategy = ApprovalStrategies.Majority,
+                UserId = 6 // Gökhan Arslan
+            },
+            new ApprovalWorkflowStep
+            {
+                WorkflowId = parallelMajorityWorkflow.Id,
+                StepOrder = 3,
+                Level = 1,
+                StepType = StepTypes.Parallel,
+                ApprovalStrategy = ApprovalStrategies.Majority,
+                UserId = 9 // Kemal Çelik
+            },
+            new ApprovalWorkflowStep
+            {
+                WorkflowId = parallelMajorityWorkflow.Id,
+                StepOrder = 4,
+                Level = 1,
+                StepType = StepTypes.Parallel,
+                ApprovalStrategy = ApprovalStrategies.Majority,
+                UserId = 12 // Murat Yılmaz
+            },
+            new ApprovalWorkflowStep
+            {
+                WorkflowId = parallelMajorityWorkflow.Id,
+                StepOrder = 5,
+                Level = 1,
+                StepType = StepTypes.Parallel,
+                ApprovalStrategy = ApprovalStrategies.Majority,
+                UserId = 15 // Pınar Aydın
+            }
+        };
+        await context.ApprovalWorkflowSteps.AddRangeAsync(parallelMajoritySteps);
+
+        // 9. Karma Akış (Sequential → Parallel-Majority → Sequential)
+        var mixedWorkflow = new ApprovalWorkflow
+        {
+            Name = "Test: Karma Onay Akışı",
+            Description = "Level 1: Sequential → Level 2: Parallel-Majority → Level 3: Sequential",
+            Category = "Test",
+            IsActive = true,
+            Priority = 10,
+            CreatedAt = DateTime.UtcNow
+        };
+        await context.ApprovalWorkflows.AddAsync(mixedWorkflow);
+        await context.SaveChangesAsync();
+
+        var mixedSteps = new[]
+        {
+            // Level 1: Sequential
+            new ApprovalWorkflowStep
+            {
+                WorkflowId = mixedWorkflow.Id,
+                StepOrder = 1,
+                Level = 1,
+                StepType = StepTypes.Sequential,
+                ApprovalStrategy = ApprovalStrategies.All,
+                UserId = 3 // Deniz Kaya - IT Müdürü
+            },
+            // Level 2: Parallel-Majority (3 kişiden 2'si)
+            new ApprovalWorkflowStep
+            {
+                WorkflowId = mixedWorkflow.Id,
+                StepOrder = 2,
+                Level = 2,
+                StepType = StepTypes.Parallel,
+                ApprovalStrategy = ApprovalStrategies.Majority,
+                UserId = 6 // Gökhan Arslan - Finans Müdürü
+            },
+            new ApprovalWorkflowStep
+            {
+                WorkflowId = mixedWorkflow.Id,
+                StepOrder = 3,
+                Level = 2,
+                StepType = StepTypes.Parallel,
+                ApprovalStrategy = ApprovalStrategies.Majority,
+                UserId = 9 // Kemal Çelik - İK Müdürü
+            },
+            new ApprovalWorkflowStep
+            {
+                WorkflowId = mixedWorkflow.Id,
+                StepOrder = 4,
+                Level = 2,
+                StepType = StepTypes.Parallel,
+                ApprovalStrategy = ApprovalStrategies.Majority,
+                UserId = 12 // Murat Yılmaz - Satış Müdürü
+            },
+            // Level 3: Sequential
+            new ApprovalWorkflowStep
+            {
+                WorkflowId = mixedWorkflow.Id,
+                StepOrder = 5,
+                Level = 3,
+                StepType = StepTypes.Sequential,
+                ApprovalStrategy = ApprovalStrategies.All,
+                UserId = 19 // Volkan Erdoğan - CEO
+            }
+        };
+        await context.ApprovalWorkflowSteps.AddRangeAsync(mixedSteps);
+
+        await context.SaveChangesAsync();
+
+        logger.LogInformation("✅ 9 onay akışı başarıyla oluşturuldu!");
         logger.LogInformation("📋 IT Talepleri: IT Müdürü → IT Direktörü");
         logger.LogInformation("📋 Finans Talepleri: Finans Müdürü → CFO → CEO");
         logger.LogInformation("📋 İK Talepleri: İK Müdürü → İK Direktörü");
         logger.LogInformation("📋 Satış Talepleri: Satış Müdürü → Satış Direktörü → CFO");
         logger.LogInformation("📋 Genel Talepler: Operasyon Müdürü → Operasyon Direktörü");
+        logger.LogInformation("🧪 TEST: Paralel-Any (3 kişiden 1'i yeterli)");
+        logger.LogInformation("🧪 TEST: Paralel-All (3 kişinin hepsi gerekli)");
+        logger.LogInformation("🧪 TEST: Paralel-Majority (5 kişiden 3'ü gerekli)");
+        logger.LogInformation("🧪 TEST: Karma Akış (Sequential → Majority → Sequential)");
     }
 }
 

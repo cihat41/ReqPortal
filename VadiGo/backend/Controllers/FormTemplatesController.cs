@@ -103,6 +103,7 @@ public class FormTemplatesController : ControllerBase
                 f.Options,
                 f.DependsOn,
                 f.VisibilityCondition,
+                f.CalculationFormula,
                 f.HelpText
             })
         });
@@ -150,6 +151,7 @@ public class FormTemplatesController : ControllerBase
                     Options = fieldDto.Options,
                     DependsOn = fieldDto.DependsOn,
                     VisibilityCondition = fieldDto.VisibilityCondition,
+                    CalculationFormula = fieldDto.CalculationFormula,
                     HelpText = fieldDto.HelpText
                 };
                 _context.FormFields.Add(field);
@@ -212,6 +214,7 @@ public class FormTemplatesController : ControllerBase
                     Options = fieldDto.Options,
                     DependsOn = fieldDto.DependsOn,
                     VisibilityCondition = fieldDto.VisibilityCondition,
+                    CalculationFormula = fieldDto.CalculationFormula,
                     HelpText = fieldDto.HelpText
                 };
                 _context.FormFields.Add(field);
@@ -263,6 +266,7 @@ public class FormFieldDto
     public string? Options { get; set; }
     public string? DependsOn { get; set; }
     public string? VisibilityCondition { get; set; }
+    public string? CalculationFormula { get; set; }
     public string? HelpText { get; set; }
 }
 
