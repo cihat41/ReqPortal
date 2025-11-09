@@ -426,6 +426,24 @@ export default function FormTemplateBuilder() {
                           />
                         </Grid>
                       </Grid>
+
+                      {/* Calculated Field */}
+                      <Typography variant="subtitle2" sx={{ mt: 2, mb: 1, fontWeight: 600 }}>
+                        Otomatik Hesaplama
+                      </Typography>
+                      <Grid container spacing={2}>
+                        <Grid size={{ xs: 12 }}>
+                          <TextField
+                            fullWidth
+                            size="small"
+                            label="Hesaplama Formülü"
+                            value={field.calculationFormula || ''}
+                            onChange={(e) => handleFieldChange(index, 'calculationFormula', e.target.value)}
+                            placeholder="miktar * birim_fiyat"
+                            helperText="Örn: miktar * birim_fiyat, (tutar * kdv_orani) / 100"
+                          />
+                        </Grid>
+                      </Grid>
                     </Paper>
                   ))}
                 </Box>

@@ -38,6 +38,8 @@ public class FormField
 
     public string? VisibilityCondition { get; set; } // JSON condition
 
+    public string? CalculationFormula { get; set; } // Formula for calculated fields (e.g., "miktar * birim_fiyat")
+
     [MaxLength(500)]
     public string? HelpText { get; set; }
 

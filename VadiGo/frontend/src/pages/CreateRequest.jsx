@@ -29,8 +29,73 @@ const priorities = [
   { value: 'Critical', label: 'Kritik' },
 ];
 
+// Validation helper function
+const validateField = (field, value) => {
+  if (!field.validationRules) return { isValid: true, error: '' };
+
+  try {
+    const rules = JSON.parse(field.validationRules);
+
+    // Required check
+    if (field.isRequired && (!value || value === '')) {
+      return { isValid: false, error: 'Bu alan zorunludur' };
+    }
+
+    // Skip other validations if value is empty and not required
+    if (!value || value === '') return { isValid: true, error: '' };
+
+    // Min length
+    if (rules.minLength && value.length < rules.minLength) {
+      return { isValid: false, error: `En az ${rules.minLength} karakter olmalıdır` };
+    }
+
+    // Max length
+    if (rules.maxLength && value.length > rules.maxLength) {
+      return { isValid: false, error: `En fazla ${rules.maxLength} karakter olmalıdır` };
+    }
+
+    // Min value (for numbers)
+    if (rules.min !== undefined && parseFloat(value) < rules.min) {
+      return { isValid: false, error: `En az ${rules.min} olmalıdır` };
+    }
+
+    // Max value (for numbers)
+    if (rules.max !== undefined && parseFloat(value) > rules.max) {
+      return { isValid: false, error: `En fazla ${rules.max} olmalıdır` };
+    }
+
+    // Regex pattern
+    if (rules.pattern) {
+      const regex = new RegExp(rules.pattern);
+      if (!regex.test(value)) {
+        return { isValid: false, error: rules.patternMessage || 'Geçersiz format' };
+      }
+    }
+
+    // Email format
+    if (field.fieldType === 'email') {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(value)) {
+        return { isValid: false, error: 'Geçerli bir email adresi giriniz' };
+      }
+    }
+
+    return { isValid: true, error: '' };
+  } catch {
+    return { isValid: true, error: '' };
+  }
+};
+
 // Dynamic Form Field Renderer Component
 const DynamicFormField = ({ field, value, onChange, allValues }) => {
+  const [validationError, setValidationError] = useState('');
+
+  // Validate on value change
+  useEffect(() => {
+    const validation = validateField(field, value);
+    setValidationError(validation.error);
+  }, [value, field]);
+
   // Check visibility condition
   const isVisible = () => {
     if (!field.dependsOn || !field.visibilityCondition) return true;
@@ -85,7 +150,8 @@ const DynamicFormField = ({ field, value, onChange, allValues }) => {
             placeholder={field.placeholder || ''}
             value={value}
             onChange={(e) => onChange(e.target.value)}
-            helperText={field.helpText}
+            error={!!validationError}
+            helperText={validationError || field.helpText}
             sx={commonSx}
           />
         );
@@ -100,11 +166,23 @@ const DynamicFormField = ({ field, value, onChange, allValues }) => {
             placeholder={field.placeholder || ''}
             value={value}
             onChange={(e) => onChange(e.target.value)}
-            helperText={field.helpText}
+            error={!!validationError}
+            helperText={validationError || field.helpText}
+            disabled={!!field.calculationFormula}
             slotProps={{
-              htmlInput: { min: 0, step: field.fieldType === 'currency' ? 0.01 : 1 }
+              htmlInput: { min: 0, step: field.fieldType === 'currency' ? 0.01 : 1 },
+              input: {
+                readOnly: !!field.calculationFormula,
+              },
             }}
-            sx={commonSx}
+            sx={{
+              ...commonSx,
+              ...(field.calculationFormula && {
+                '& .MuiOutlinedInput-root': {
+                  backgroundColor: 'action.hover',
+                },
+              }),
+            }}
           />
         );
 
@@ -118,7 +196,8 @@ const DynamicFormField = ({ field, value, onChange, allValues }) => {
             placeholder={field.placeholder || ''}
             value={value}
             onChange={(e) => onChange(e.target.value)}
-            helperText={field.helpText}
+            error={!!validationError}
+            helperText={validationError || field.helpText}
             sx={commonSx}
           />
         );
@@ -221,23 +300,31 @@ const DynamicFormField = ({ field, value, onChange, allValues }) => {
       case 'file':
         return (
           <Box>
-            <Button variant="outlined" component="label">
-              Dosya Seç
+            <Button variant="outlined" component="label" fullWidth>
+              {value ? 'Dosya Değiştir' : 'Dosya Seç'}
               <input
                 type="file"
                 hidden
                 onChange={(e) => {
                   const file = e.target.files?.[0];
                   if (file) {
-                    onChange(file.name);
+                    // Store the actual File object, not just the name
+                    onChange(file);
                   }
                 }}
               />
             </Button>
             {value && (
-              <Typography variant="body2" sx={{ mt: 1 }}>
-                Seçilen dosya: {value}
-              </Typography>
+              <Box sx={{ mt: 1, p: 1, bgcolor: 'action.hover', borderRadius: 1 }}>
+                <Typography variant="body2">
+                  📎 {value.name || value}
+                </Typography>
+                {value.size && (
+                  <Typography variant="caption" color="text.secondary">
+                    {(value.size / 1024).toFixed(2)} KB
+                  </Typography>
+                )}
+              </Box>
             )}
             {field.helpText && <FormHelperText>{field.helpText}</FormHelperText>}
           </Box>
@@ -300,6 +387,58 @@ const CreateRequest = () => {
     fetchTemplates();
   }, []);
 
+  // Calculate fields with formulas
+  useEffect(() => {
+    if (!templateDetails?.fields) return;
+
+    const calculatedFields = templateDetails.fields.filter(f => f.calculationFormula);
+    if (calculatedFields.length === 0) return;
+
+    const newDynamicFormData = { ...dynamicFormData };
+    let hasChanges = false;
+
+    calculatedFields.forEach(field => {
+      try {
+        // Replace field names with their values in the formula
+        let formula = field.calculationFormula;
+
+        // Find all field names in the formula (alphanumeric + underscore)
+        const fieldNames = formula.match(/[a-zA-Z_][a-zA-Z0-9_]*/g) || [];
+
+        // Replace each field name with its value
+        fieldNames.forEach(fieldName => {
+          const value = dynamicFormData[fieldName];
+          if (value !== undefined && value !== null && value !== '') {
+            // Replace field name with its numeric value
+            const numValue = parseFloat(value);
+            if (!isNaN(numValue)) {
+              formula = formula.replace(new RegExp(`\\b${fieldName}\\b`, 'g'), numValue);
+            }
+          }
+        });
+
+        // Evaluate the formula (only if all variables are replaced with numbers)
+        if (!/[a-zA-Z_]/.test(formula)) {
+          // eslint-disable-next-line no-eval
+          const result = eval(formula);
+          if (!isNaN(result) && isFinite(result)) {
+            const roundedResult = Math.round(result * 100) / 100; // Round to 2 decimals
+            if (newDynamicFormData[field.name] !== roundedResult) {
+              newDynamicFormData[field.name] = roundedResult;
+              hasChanges = true;
+            }
+          }
+        }
+      } catch (error) {
+        console.error(`Calculation error for field ${field.name}:`, error);
+      }
+    });
+
+    if (hasChanges) {
+      setDynamicFormData(newDynamicFormData);
+    }
+  }, [dynamicFormData, templateDetails]);
+
   // Fetch template details when selected
   useEffect(() => {
     const fetchTemplateDetails = async () => {
@@ -357,6 +496,19 @@ const CreateRequest = () => {
         }
       }
 
+      // Separate files from form data
+      const files = {};
+      const cleanFormData = {};
+
+      Object.entries(dynamicFormData).forEach(([key, value]) => {
+        if (value instanceof File) {
+          files[key] = value;
+          cleanFormData[key] = value.name; // Store filename in formData
+        } else {
+          cleanFormData[key] = value;
+        }
+      });
+
       const requestData = {
         title: formData.title,
         description: formData.description,
@@ -367,11 +519,34 @@ const CreateRequest = () => {
         estimatedCost: null,
         slaHours: formData.slaHours ? parseInt(formData.slaHours) : null,
         formTemplateId: selectedTemplate,
-        formData: JSON.stringify(dynamicFormData),
+        formData: JSON.stringify(cleanFormData),
         saveAsDraft: isDraft,
       };
 
-      await requestsAPI.create(requestData);
+      const response = await requestsAPI.create(requestData);
+      const requestId = response.data.id;
+
+      // Upload files if any
+      if (Object.keys(files).length > 0) {
+        for (const [fieldName, file] of Object.entries(files)) {
+          const formData = new FormData();
+          formData.append('file', file);
+
+          try {
+            await fetch(`/api/attachments/upload/${requestId}`, {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+              },
+              body: formData
+            });
+          } catch (uploadErr) {
+            console.error(`Failed to upload file for ${fieldName}:`, uploadErr);
+            // Continue with other files even if one fails
+          }
+        }
+      }
+
       navigate('/requests');
     } catch (err) {
       setError(err.response?.data?.message || 'Talep oluşturulurken bir hata oluştu.');

@@ -102,6 +102,11 @@ public class ApplicationDbContext : DbContext
                 .WithMany(r => r.Attachments)
                 .HasForeignKey(ra => ra.RequestId)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(ra => ra.Uploader)
+                .WithMany()
+                .HasForeignKey(ra => ra.UploadedBy)
+                .OnDelete(DeleteBehavior.Cascade);
         });
 
         // AuditLog configuration
