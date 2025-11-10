@@ -28,6 +28,12 @@ const STEP_TYPES = {
   parallel: 'Paralel',
 };
 
+const APPROVAL_STRATEGIES = {
+  any: 'Herhangi Biri (Any) - 1 kişi yeterli',
+  all: 'Hepsi (All) - Tümü onaylamalı',
+  majority: 'Çoğunluk (Majority) - 50%+1 onaylamalı',
+};
+
 export default function WorkflowBuilder() {
   const navigate = useNavigate();
   const { id } = useParams();
@@ -40,6 +46,7 @@ export default function WorkflowBuilder() {
     conditions: '',
     isActive: true,
     priority: 0,
+    approvalStrategy: 'all', // ✅ Workflow seviyesinde
     steps: [],
   });
 
@@ -82,6 +89,7 @@ export default function WorkflowBuilder() {
         conditions: workflow.conditions || '',
         isActive: workflow.isActive,
         priority: workflow.priority,
+        approvalStrategy: workflow.approvalStrategy || 'all', // ✅ Workflow seviyesinde
         steps: workflow.steps.map(step => ({
           id: step.id,
           stepOrder: step.stepOrder,
@@ -107,6 +115,7 @@ export default function WorkflowBuilder() {
         {
           stepOrder: formData.steps.length + 1,
           stepType: 'sequential',
+          // ✅ approvalStrategy kaldırıldı - artık workflow seviyesinde
           roleId: null,
           userId: null,
           timeoutHours: null,
@@ -196,6 +205,19 @@ export default function WorkflowBuilder() {
                   onChange={(e) => setFormData({ ...formData, category: e.target.value })}
                   required
                 />
+                <TextField
+                  select
+                  label="Onay Stratejisi"
+                  value={formData.approvalStrategy}
+                  onChange={(e) => setFormData({ ...formData, approvalStrategy: e.target.value })}
+                  helperText="Tüm workflow için geçerli onay stratejisi"
+                >
+                  {Object.entries(APPROVAL_STRATEGIES).map(([key, value]) => (
+                    <MenuItem key={key} value={key}>
+                      {value}
+                    </MenuItem>
+                  ))}
+                </TextField>
                 <TextField
                   label="Koşullar (JSON)"
                   multiline
@@ -301,6 +323,7 @@ export default function WorkflowBuilder() {
                             ))}
                           </TextField>
                         </Grid>
+                        {/* ✅ Onay Stratejisi field'ı kaldırıldı - artık workflow seviyesinde */}
                         <Grid size={{ xs: 12, sm: 6 }}>
                           <TextField
                             fullWidth

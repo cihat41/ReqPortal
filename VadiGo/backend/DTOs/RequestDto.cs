@@ -21,6 +21,9 @@ public class RequestDto
     public DateTime? SubmittedAt { get; set; }
     public DateTime? CompletedAt { get; set; }
     public List<AttachmentDto>? Attachments { get; set; }
+    public List<ApprovalDto>? Approvals { get; set; }
+    public int? WorkflowId { get; set; }
+    public string? WorkflowName { get; set; }
 }
 
 public class AttachmentDto
@@ -30,6 +33,21 @@ public class AttachmentDto
     public long FileSize { get; set; }
     public string? ContentType { get; set; }
     public DateTime UploadedAt { get; set; }
+}
+
+public class ApprovalDto
+{
+    public int Id { get; set; }
+    public int RequestId { get; set; }
+    public int ApproverId { get; set; }
+    public string ApproverName { get; set; } = string.Empty;
+    public string ApproverEmail { get; set; } = string.Empty;
+    public int Level { get; set; }
+    public int StepOrder { get; set; }
+    public string Status { get; set; } = string.Empty;
+    public string? Comments { get; set; }
+    public DateTime? ApprovedAt { get; set; }
+    public DateTime CreatedAt { get; set; }
 }
 
 public class CreateRequestDto

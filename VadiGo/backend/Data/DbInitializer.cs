@@ -803,12 +803,148 @@ public static class DbInitializer
         });
         await context.SaveChangesAsync();
 
-        logger.LogInformation("✅ 5 adet form şablonu başarıyla oluşturuldu!");
+        // ========================================
+        // TEST FORM ŞABLONLARI - PARALEL ONAY TESTLERİ
+        // ========================================
+
+        // Test workflow'larını al
+        var parallelAnyWorkflow = await context.ApprovalWorkflows.FirstOrDefaultAsync(w => w.Name == "Test: Paralel Onay - Herhangi Biri");
+        var parallelAllWorkflow = await context.ApprovalWorkflows.FirstOrDefaultAsync(w => w.Name == "Test: Paralel Onay - Hepsi Gerekli");
+        var parallelMajorityWorkflow = await context.ApprovalWorkflows.FirstOrDefaultAsync(w => w.Name == "Test: Paralel Onay - Çoğunluk");
+        var mixedWorkflow = await context.ApprovalWorkflows.FirstOrDefaultAsync(w => w.Name == "Test: Karma Onay Akışı");
+
+        // 6. Test: Paralel-Any Form
+        var testParallelAnyForm = new FormTemplate
+        {
+            Name = "Test: Paralel-Any Formu",
+            Description = "Paralel onay testi - Herhangi biri onaylayınca geçer",
+            Category = "Test",
+            IsActive = true,
+            Version = 1,
+            DefaultWorkflowId = parallelAnyWorkflow?.Id,
+            CreatedBy = 1,
+            CreatedAt = DateTime.UtcNow
+        };
+        context.FormTemplates.Add(testParallelAnyForm);
+        await context.SaveChangesAsync();
+
+        context.FormFields.AddRange(new[]
+        {
+            new FormField
+            {
+                FormTemplateId = testParallelAnyForm.Id,
+                Name = "test_description",
+                Label = "Test Açıklaması",
+                FieldType = "textarea",
+                IsRequired = true,
+                Order = 1,
+                Placeholder = "Paralel-Any test açıklaması",
+                HelpText = "3 kişiden herhangi biri onaylayınca geçer"
+            }
+        });
+
+        // 7. Test: Paralel-All Form
+        var testParallelAllForm = new FormTemplate
+        {
+            Name = "Test: Paralel-All Formu",
+            Description = "Paralel onay testi - Hepsi onaylamalı",
+            Category = "Test",
+            IsActive = true,
+            Version = 1,
+            DefaultWorkflowId = parallelAllWorkflow?.Id,
+            CreatedBy = 1,
+            CreatedAt = DateTime.UtcNow
+        };
+        context.FormTemplates.Add(testParallelAllForm);
+        await context.SaveChangesAsync();
+
+        context.FormFields.AddRange(new[]
+        {
+            new FormField
+            {
+                FormTemplateId = testParallelAllForm.Id,
+                Name = "test_description",
+                Label = "Test Açıklaması",
+                FieldType = "textarea",
+                IsRequired = true,
+                Order = 1,
+                Placeholder = "Paralel-All test açıklaması",
+                HelpText = "3 kişinin hepsi onaylamalı"
+            }
+        });
+
+        // 8. Test: Paralel-Majority Form
+        var testParallelMajorityForm = new FormTemplate
+        {
+            Name = "Test: Paralel-Majority Formu",
+            Description = "Paralel onay testi - Çoğunluk onaylamalı",
+            Category = "Test",
+            IsActive = true,
+            Version = 1,
+            DefaultWorkflowId = parallelMajorityWorkflow?.Id,
+            CreatedBy = 1,
+            CreatedAt = DateTime.UtcNow
+        };
+        context.FormTemplates.Add(testParallelMajorityForm);
+        await context.SaveChangesAsync();
+
+        context.FormFields.AddRange(new[]
+        {
+            new FormField
+            {
+                FormTemplateId = testParallelMajorityForm.Id,
+                Name = "test_description",
+                Label = "Test Açıklaması",
+                FieldType = "textarea",
+                IsRequired = true,
+                Order = 1,
+                Placeholder = "Paralel-Majority test açıklaması",
+                HelpText = "5 kişiden 3'ü onaylamalı"
+            }
+        });
+
+        // 9. Test: Karma Akış Form
+        var testMixedForm = new FormTemplate
+        {
+            Name = "Test: Karma Akış Formu",
+            Description = "Karma onay akışı testi - Sequential + Parallel + Sequential",
+            Category = "Test",
+            IsActive = true,
+            Version = 1,
+            DefaultWorkflowId = mixedWorkflow?.Id,
+            CreatedBy = 1,
+            CreatedAt = DateTime.UtcNow
+        };
+        context.FormTemplates.Add(testMixedForm);
+        await context.SaveChangesAsync();
+
+        context.FormFields.AddRange(new[]
+        {
+            new FormField
+            {
+                FormTemplateId = testMixedForm.Id,
+                Name = "test_description",
+                Label = "Test Açıklaması",
+                FieldType = "textarea",
+                IsRequired = true,
+                Order = 1,
+                Placeholder = "Karma akış test açıklaması",
+                HelpText = "Sequential → Parallel-Majority → Sequential"
+            }
+        });
+
+        await context.SaveChangesAsync();
+
+        logger.LogInformation("✅ 9 adet form şablonu başarıyla oluşturuldu!");
         logger.LogInformation("📋 Genel Talep Formu → Genel Talepler Onay Akışı");
         logger.LogInformation("📋 Avans Talep Formu → Finans Talepleri Onay Akışı");
         logger.LogInformation("📋 Ödeme Fişi Formu → Finans Talepleri Onay Akışı");
         logger.LogInformation("📋 Yeni Müşteri Formu → Satış Talepleri Onay Akışı");
         logger.LogInformation("📋 İzin Talep Formu → İK Talepleri Onay Akışı");
+        logger.LogInformation("🧪 TEST: Paralel-Any Formu → Paralel-Any Workflow");
+        logger.LogInformation("🧪 TEST: Paralel-All Formu → Paralel-All Workflow");
+        logger.LogInformation("🧪 TEST: Paralel-Majority Formu → Paralel-Majority Workflow");
+        logger.LogInformation("🧪 TEST: Karma Akış Formu → Karma Akış Workflow");
     }
 
     private static async Task SeedEmailSettingsAsync(ApplicationDbContext context, ILogger logger)
@@ -1026,6 +1162,7 @@ public static class DbInitializer
             Category = "Test",
             IsActive = true,
             Priority = 10,
+            ApprovalStrategy = ApprovalStrategies.Any, // ✅ WORKFLOW SEVİYESİNDE
             CreatedAt = DateTime.UtcNow
         };
         await context.ApprovalWorkflows.AddAsync(parallelAnyWorkflow);
@@ -1039,7 +1176,6 @@ public static class DbInitializer
                 StepOrder = 1,
                 Level = 1,
                 StepType = StepTypes.Parallel,
-                ApprovalStrategy = ApprovalStrategies.Any,
                 UserId = 3 // Deniz Kaya
             },
             new ApprovalWorkflowStep
@@ -1048,7 +1184,6 @@ public static class DbInitializer
                 StepOrder = 2,
                 Level = 1,
                 StepType = StepTypes.Parallel,
-                ApprovalStrategy = ApprovalStrategies.Any,
                 UserId = 6 // Gökhan Arslan
             },
             new ApprovalWorkflowStep
@@ -1057,7 +1192,6 @@ public static class DbInitializer
                 StepOrder = 3,
                 Level = 1,
                 StepType = StepTypes.Parallel,
-                ApprovalStrategy = ApprovalStrategies.Any,
                 UserId = 9 // Kemal Çelik
             }
         };
@@ -1071,6 +1205,7 @@ public static class DbInitializer
             Category = "Test",
             IsActive = true,
             Priority = 10,
+            ApprovalStrategy = ApprovalStrategies.All, // ✅ WORKFLOW SEVİYESİNDE
             CreatedAt = DateTime.UtcNow
         };
         await context.ApprovalWorkflows.AddAsync(parallelAllWorkflow);
@@ -1084,7 +1219,6 @@ public static class DbInitializer
                 StepOrder = 1,
                 Level = 1,
                 StepType = StepTypes.Parallel,
-                ApprovalStrategy = ApprovalStrategies.All,
                 UserId = 4 // Ece Demir
             },
             new ApprovalWorkflowStep
@@ -1093,7 +1227,6 @@ public static class DbInitializer
                 StepOrder = 2,
                 Level = 1,
                 StepType = StepTypes.Parallel,
-                ApprovalStrategy = ApprovalStrategies.All,
                 UserId = 7 // Hakan Özdemir
             },
             new ApprovalWorkflowStep
@@ -1102,7 +1235,6 @@ public static class DbInitializer
                 StepOrder = 3,
                 Level = 1,
                 StepType = StepTypes.Parallel,
-                ApprovalStrategy = ApprovalStrategies.All,
                 UserId = 10 // Leyla Şahin
             }
         };
@@ -1116,6 +1248,7 @@ public static class DbInitializer
             Category = "Test",
             IsActive = true,
             Priority = 10,
+            ApprovalStrategy = ApprovalStrategies.Majority, // ✅ WORKFLOW SEVİYESİNDE
             CreatedAt = DateTime.UtcNow
         };
         await context.ApprovalWorkflows.AddAsync(parallelMajorityWorkflow);
@@ -1129,7 +1262,6 @@ public static class DbInitializer
                 StepOrder = 1,
                 Level = 1,
                 StepType = StepTypes.Parallel,
-                ApprovalStrategy = ApprovalStrategies.Majority,
                 UserId = 3 // Deniz Kaya
             },
             new ApprovalWorkflowStep
@@ -1138,7 +1270,6 @@ public static class DbInitializer
                 StepOrder = 2,
                 Level = 1,
                 StepType = StepTypes.Parallel,
-                ApprovalStrategy = ApprovalStrategies.Majority,
                 UserId = 6 // Gökhan Arslan
             },
             new ApprovalWorkflowStep
@@ -1147,7 +1278,6 @@ public static class DbInitializer
                 StepOrder = 3,
                 Level = 1,
                 StepType = StepTypes.Parallel,
-                ApprovalStrategy = ApprovalStrategies.Majority,
                 UserId = 9 // Kemal Çelik
             },
             new ApprovalWorkflowStep
@@ -1156,7 +1286,6 @@ public static class DbInitializer
                 StepOrder = 4,
                 Level = 1,
                 StepType = StepTypes.Parallel,
-                ApprovalStrategy = ApprovalStrategies.Majority,
                 UserId = 12 // Murat Yılmaz
             },
             new ApprovalWorkflowStep
@@ -1165,7 +1294,6 @@ public static class DbInitializer
                 StepOrder = 5,
                 Level = 1,
                 StepType = StepTypes.Parallel,
-                ApprovalStrategy = ApprovalStrategies.Majority,
                 UserId = 15 // Pınar Aydın
             }
         };
@@ -1179,6 +1307,7 @@ public static class DbInitializer
             Category = "Test",
             IsActive = true,
             Priority = 10,
+            ApprovalStrategy = ApprovalStrategies.Majority, // ✅ WORKFLOW SEVİYESİNDE - Level 2 için
             CreatedAt = DateTime.UtcNow
         };
         await context.ApprovalWorkflows.AddAsync(mixedWorkflow);
@@ -1193,7 +1322,6 @@ public static class DbInitializer
                 StepOrder = 1,
                 Level = 1,
                 StepType = StepTypes.Sequential,
-                ApprovalStrategy = ApprovalStrategies.All,
                 UserId = 3 // Deniz Kaya - IT Müdürü
             },
             // Level 2: Parallel-Majority (3 kişiden 2'si)
@@ -1203,7 +1331,6 @@ public static class DbInitializer
                 StepOrder = 2,
                 Level = 2,
                 StepType = StepTypes.Parallel,
-                ApprovalStrategy = ApprovalStrategies.Majority,
                 UserId = 6 // Gökhan Arslan - Finans Müdürü
             },
             new ApprovalWorkflowStep
@@ -1212,7 +1339,6 @@ public static class DbInitializer
                 StepOrder = 3,
                 Level = 2,
                 StepType = StepTypes.Parallel,
-                ApprovalStrategy = ApprovalStrategies.Majority,
                 UserId = 9 // Kemal Çelik - İK Müdürü
             },
             new ApprovalWorkflowStep
@@ -1221,7 +1347,6 @@ public static class DbInitializer
                 StepOrder = 4,
                 Level = 2,
                 StepType = StepTypes.Parallel,
-                ApprovalStrategy = ApprovalStrategies.Majority,
                 UserId = 12 // Murat Yılmaz - Satış Müdürü
             },
             // Level 3: Sequential
@@ -1231,7 +1356,6 @@ public static class DbInitializer
                 StepOrder = 5,
                 Level = 3,
                 StepType = StepTypes.Sequential,
-                ApprovalStrategy = ApprovalStrategies.All,
                 UserId = 19 // Volkan Erdoğan - CEO
             }
         };

@@ -280,8 +280,8 @@ Detayları görmek için sisteme giriş yapınız.
             return levelApprovals.All(a => a.Status == ApprovalStatus.Approved);
         }
 
-        // İlk step'in stratejisini al (aynı level'daki tüm step'ler aynı stratejiye sahip olmalı)
-        var strategy = workflowSteps.First().ApprovalStrategy;
+        // ✅ Workflow seviyesinden stratejiyi al
+        var strategy = request.FormTemplate.DefaultWorkflow.ApprovalStrategy;
 
         var approvedCount = levelApprovals.Count(a => a.Status == ApprovalStatus.Approved);
         var totalCount = levelApprovals.Count;

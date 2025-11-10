@@ -19,14 +19,18 @@ import {
   Grid,
   CircularProgress,
   Alert,
+  Collapse,
+  Autocomplete,
 } from '@mui/material';
 import {
   Add as AddIcon,
   Visibility as VisibilityIcon,
   Edit as EditIcon,
   Delete as DeleteIcon,
+  FilterList as FilterIcon,
+  Clear as ClearIcon,
 } from '@mui/icons-material';
-import { requestsAPI } from '../services/api';
+import { requestsAPI, formTemplatesAPI } from '../services/api';
 
 const statusColors = {
   Draft: 'default',
@@ -51,14 +55,34 @@ const Requests = () => {
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
+  const [formTemplates, setFormTemplates] = useState([]);
   const [filters, setFilters] = useState({
     status: '',
     search: '',
+    priority: '',
+    category: '',
+    formTemplateId: '',
+    startDate: '',
+    endDate: '',
   });
 
   useEffect(() => {
     fetchRequests();
   }, [filters]);
+
+  useEffect(() => {
+    fetchFormTemplates();
+  }, []);
+
+  const fetchFormTemplates = async () => {
+    try {
+      const response = await formTemplatesAPI.getAll();
+      setFormTemplates(response.data);
+    } catch (err) {
+      console.error('Form templates yüklenirken hata:', err);
+    }
+  };
 
   const fetchRequests = async () => {
     try {
@@ -91,6 +115,20 @@ const Requests = () => {
   const handleFilterChange = (field, value) => {
     setFilters((prev) => ({ ...prev, [field]: value }));
   };
+
+  const handleClearFilters = () => {
+    setFilters({
+      status: '',
+      search: '',
+      priority: '',
+      category: '',
+      formTemplateId: '',
+      startDate: '',
+      endDate: '',
+    });
+  };
+
+  const hasActiveFilters = Object.values(filters).some(value => value !== '');
 
   if (loading) {
     return (
@@ -141,6 +179,30 @@ const Requests = () => {
           borderColor: 'divider',
         }}
       >
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+          <Typography variant="h6" sx={{ fontSize: '1rem', fontWeight: 600 }}>
+            Filtreler
+          </Typography>
+          <Box sx={{ display: 'flex', gap: 1 }}>
+            {hasActiveFilters && (
+              <Button
+                size="small"
+                startIcon={<ClearIcon />}
+                onClick={handleClearFilters}
+              >
+                Temizle
+              </Button>
+            )}
+            <Button
+              size="small"
+              startIcon={<FilterIcon />}
+              onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+            >
+              {showAdvancedFilters ? 'Basit Filtre' : 'Gelişmiş Filtre'}
+            </Button>
+          </Box>
+        </Box>
+
         <Grid container spacing={2}>
           <Grid item xs={12} md={6}>
             <TextField
@@ -169,6 +231,66 @@ const Requests = () => {
             </TextField>
           </Grid>
         </Grid>
+
+        <Collapse in={showAdvancedFilters}>
+          <Grid container spacing={2} sx={{ mt: 2 }}>
+            <Grid item xs={12} md={6}>
+              <TextField
+                fullWidth
+                select
+                label="Öncelik"
+                value={filters.priority}
+                onChange={(e) => handleFilterChange('priority', e.target.value)}
+              >
+                <MenuItem value="">Tümü</MenuItem>
+                <MenuItem value="Low">Düşük</MenuItem>
+                <MenuItem value="Medium">Orta</MenuItem>
+                <MenuItem value="High">Yüksek</MenuItem>
+                <MenuItem value="Critical">Kritik</MenuItem>
+              </TextField>
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <TextField
+                fullWidth
+                label="Kategori"
+                placeholder="Kategori ara..."
+                value={filters.category}
+                onChange={(e) => handleFilterChange('category', e.target.value)}
+              />
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <Autocomplete
+                options={formTemplates}
+                getOptionLabel={(option) => option.name || ''}
+                value={formTemplates.find(ft => ft.id === filters.formTemplateId) || null}
+                onChange={(e, newValue) => handleFilterChange('formTemplateId', newValue?.id || '')}
+                renderInput={(params) => (
+                  <TextField {...params} label="Form Şablonu" placeholder="Form şablonu seçin..." />
+                )}
+              />
+            </Grid>
+            <Grid item xs={12} md={3}>
+              <TextField
+                fullWidth
+                type="date"
+                label="Başlangıç Tarihi"
+                value={filters.startDate}
+                onChange={(e) => handleFilterChange('startDate', e.target.value)}
+                InputLabelProps={{ shrink: true }}
+              />
+            </Grid>
+            <Grid item xs={12} md={3}>
+              <TextField
+                fullWidth
+                type="date"
+                label="Bitiş Tarihi"
+                value={filters.endDate}
+                onChange={(e) => handleFilterChange('endDate', e.target.value)}
+                InputLabelProps={{ shrink: true }}
+              />
+            </Grid>
+          </Grid>
+        </Collapse>
       </Paper>
 
       <TableContainer

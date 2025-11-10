@@ -1,0 +1,245 @@
+{
+  "HttpService": {
+    "HttpPrefix": "http://*:12100",
+    "StoredHashedPassword": "AQAAAAIAAYagAAAAEPDTs4AlCW7mQ3BxM4ZXC9pVWUwW/tJO1b+evMabz+Fa2k3CFNIlW3i3gOrRqZWLIA==",
+    "TcmbSorguService": "https://172.27.2.21/FASTQS/services/sorgu",
+    "TcmbRaporService": "https://172.27.2.22/FASTRS/services/rapor",
+    "JwtOptions": {
+      "EnvironmentVariableName": "SIFAST_JWT_SECRET"
+    },
+    "StoredHashedPasswordOptions": {
+      "EnvironmentVariableName": "SIFAST_HASH_PASSWORD"
+    }
+  },
+  "Certificates": {
+    "TcmbVerificationCertificate": {
+      "Subject": "0900",
+      "Path": "Keys/inFastKeyStore.p12",
+      "Password": "fast123"
+    },
+    "SipayEncryptionCertificate": {
+      "Subject": "0838",
+      "Path": "Keys/outFastKeyStore.p12",
+      "Password": "fast123"
+    }
+  },
+  "MessageStorageService": {
+    "DatabaseConnectionString": "Server=10.0.111.3;Persist Security Info=False;User ID=sa;Password=Sipay2023*;Connection Timeout=30;TrustServerCertificate=True;Initial Catalog=OpenBankingSiFastDb"
+  },
+  "QRCodeService": {
+    // Qr kod servisleri için öncelik sırası
+    "QrProviderOrder": [ "FastQrDB", "AktifTech" ],
+    "QRCodeProvider": {
+      "FastQrDB": "Server=10.0.111.3;Database=banking_fast_stage;User Id=sa;Password=Sipay2023*;TrustServerCertificate=True",
+      "AktifTech": {
+        "BaseUrl": "https://10.90.61.10:8087",
+        "Username": "Oltp.User",
+        "Password": "1",
+        "MbrId": 6,
+        "Channel": "Online",
+        "HttpPolicy": {
+          "TimeoutPolicySecond": 2,
+          "WaitAndRetryPolicySecond": []
+        }
+      }
+
+    }
+  },
+  "Redis": {
+    "Host": "10.0.111.6",
+    "Password": "",
+    "Port": 6379,
+    "InstanceName": "FastService.Fast",
+    "DefaultExpirationMinutes": 30,
+    "IncomingMessageTtl": 60,
+    "OutgoingMessageTtl": 10,
+    "Db": 15
+  },
+  "Services": [
+    {
+      "Name": "TCMB",
+      "ServiceType": "Gateway",
+      "RabbitMq": {
+        "ConnectionName": "FastService.Test.TCMB",
+        "HostName": "172.27.2.20",
+        "Port": 5676,
+        "UserName": "FASTUS0838",
+        "Password": "2I.F-xZ00wGb",
+        "VirtualHost": "/hft",
+        "EnableSsl": true,
+        "ConsumerDispatchConcurrency": 12,
+        "SslRabbitTrustStorePath": "RabbitMqKeys/rabbitTrustStore.p12",
+        "SslRabbitTrustStorePassword": "rabbit123",
+        "Topology": {
+          "Ensure": true,
+          "AutoAck": false,
+          "ExchangeName": "FASTEX0838",
+          "RoutingKey": "PAYMENT",
+          "IncomingQueueName": "FASTQE0838",
+          "OutgoingQueueName": "PAYMENT",
+          "ErrorQueueName": "FAST_ERROR",
+          "IncomingConsumerCount": 2,
+          "OutgoingConsumerCount": 2,
+          "PrefetchCount": 12
+        }
+      }
+    },
+    {
+      "Name": "Winfast",
+      "ServiceType": "Proxy",
+      "RabbitMq": {
+        "ConnectionName": "FastService.Test.Winfast",
+        "HostName": "10.0.111.2",
+        "Port": 5672,
+        "UserName": "FASTUS0838",
+        "Password": "2I.F-xZ00wGb",
+        "VirtualHost": "/winfast",
+        "EnableSsl": false,
+        "ConsumerDispatchConcurrency": 12,
+        "Topology": {
+          "Ensure": true,
+          "AutoAck": false,
+          "ExchangeName": "FASTEX0838",
+          "RoutingKey": "PAYMENT",
+          "IncomingQueueName": "FASTQE0838",
+          "OutgoingQueueName": "PAYMENT",
+          "ErrorQueueName": "FAST_ERROR",
+          "IncomingConsumerCount": 2,
+          "OutgoingConsumerCount": 2,
+          "PrefetchCount": 12
+        }
+      }
+    },
+    {
+      "Name": "Finflow",
+      "ServiceType": "Publisher",
+      "RabbitMq": {
+        "ConnectionName": "FastService.Test.Finflow",
+        "HostName": "10.0.111.2",
+        "Port": 5672,
+        "UserName": "us_finflow",
+        "Password": "-V0tp]14",
+        "VirtualHost": "finflow",
+        "EnableSsl": false,
+        "ConsumerDispatchConcurrency": 12,
+        "Topology": {
+          "Ensure": true,
+          "AutoAck": false,
+          "IncomingQueueName": "TOPUPCASH",
+          "OutgoingQueueName": "WITHDRAWCASH",
+          "ErrorQueueName": "TOPUPCASH_ERROR",
+          "OutgoingConsumerCount": 2,
+          "PrefetchCount": 12
+
+        }
+      }
+    },
+    {
+      "Name": "FAKE_RG2",
+      "ServiceType": "ResourceGroup",
+      "Tenants": [
+        {
+          "TenantId": "5",
+          "TenantCode": "SPYDM",
+          "TenantShortId": "1024",
+          "IsTitleCheckEnabled": false,
+          "DatabaseConnectionString": "Server=wgtestdb02.spwgpf.com;Persist Security Info=False;User ID=TEST_User;Password=Spay2023*TesT;Connection Timeout=30;TrustServerCertificate=True;Initial Catalog=TenantManagement_TEST"
+        }, 
+		{
+          "TenantId": "5",
+          "TenantCode": "SPYDM",
+          "TenantShortId": "2003", // UAT
+          "IsTitleCheckEnabled": false,
+          "DatabaseConnectionString": "Server=wgtestdb02.spwgpf.com;Persist Security Info=False;User ID=TEST_User;Password=Spay2023*TesT;Connection Timeout=30;TrustServerCertificate=True;Initial Catalog=TenantManagement_UAT"
+        },
+        {
+          "TenantId": "1",
+          "TenantCode": "FB",
+          "TenantShortId": "1021",
+          "DatabaseConnectionString": "Server=wgtestdb02.spwgpf.com;Persist Security Info=False;User ID=TEST_User;Password=Spay2023*TesT;Connection Timeout=30;TrustServerCertificate=True;Initial Catalog=TenantManagement_TEST"
+        }
+      ],
+      "RabbitMq": {
+        "ConnectionName": "FastService.Test.FAKE_RG2",
+        "HostName": "10.0.111.2",
+        "Port": 5672,
+        "UserName": "FASTUS0838",
+        "Password": "2I.F-xZ00wGb",
+        "VirtualHost": "/fake_rg2",
+        "EnableSsl": false,
+        "ConsumerDispatchConcurrency": 12,
+        "Topology": {
+          "Ensure": true,
+          "AutoAck": false,
+          "ExchangeName": "FASTEX0838",
+          "RoutingKey": "PAYMENT",
+          "IncomingQueueName": "FASTQE0838",
+          "OutgoingQueueName": "PAYMENT",
+          "ErrorQueueName": "FAST_ERROR",
+          "IncomingConsumerCount": 2,
+          "OutgoingConsumerCount": 2,
+          "PrefetchCount": 12
+        }
+      }
+    },
+    {
+      "Name": "FAKE_RG3",
+      "ServiceType": "ResourceGroup",
+	  "Tenants": [
+        {
+          "TenantId": "9", 
+          "DatabaseConnectionString": "Server=wgtestdb02.spwgpf.com;Persist Security Info=False;User ID=TEST_User;Password=Spay2023*TesT;Connection Timeout=30;TrustServerCertificate=True;Initial Catalog=TenantManagement_TEST"
+        }
+      ],
+      "RabbitMq": {
+        "ConnectionName": "FastService.Test.FAKE_RG3",
+        "HostName": "10.0.111.2",
+        "Port": 5672,
+        "UserName": "FASTUS0838",
+        "Password": "2I.F-xZ00wGb",
+        "VirtualHost": "/fake_rg3",
+        "EnableSsl": false,
+        "ConsumerDispatchConcurrency": 12,
+        "Topology": {
+          "Ensure": true,
+          "AutoAck": false,
+          "ExchangeName": "FASTEX0838",
+          "RoutingKey": "PAYMENT",
+          "IncomingQueueName": "FASTQE0838",
+          "OutgoingQueueName": "PAYMENT",
+          "ErrorQueueName": "FAST_ERROR",
+          "IncomingConsumerCount": 2,
+          "OutgoingConsumerCount": 2,
+          "PrefetchCount": 12
+        }
+      }
+    },
+    {
+      "Name": "SIFAST",
+      "ServiceType": "ResourceGroup",
+      "RabbitMq": {
+        "ConnectionName": "FastService.Test.SIFAST",
+        "HostName": "10.0.111.2",
+        "Port": 5672,
+        "UserName": "FASTUS0838",
+        "Password": "2I.F-xZ00wGb",
+        "VirtualHost": "/sifast",
+        "EnableSsl": false,
+        "ConsumerDispatchConcurrency": 12,
+        "Topology": {
+          "Ensure": true,
+          "AutoAck": false,
+          "ExchangeName": "FASTEX0838",
+          "RoutingKey": "PAYMENT",
+          "IncomingQueueName": "FASTQE0838",
+          "OutgoingQueueName": "PAYMENT",
+          "ErrorQueueName": "FAST_ERROR",
+          "IncomingConsumerCount": 2,
+          "OutgoingConsumerCount": 2,
+          "PrefetchCount": 12
+        }
+      }
+    }
+
+  ]
+}

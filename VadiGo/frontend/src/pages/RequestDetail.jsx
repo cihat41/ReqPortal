@@ -16,12 +16,22 @@ import {
   TableBody,
   TableRow,
   TableCell,
+  Tabs,
+  Tab,
+  Stepper,
+  Step,
+  StepLabel,
+  StepContent,
 } from '@mui/material';
 import {
   ArrowBack as ArrowBackIcon,
   Edit as EditIcon,
   Delete as DeleteIcon,
   AttachFile as AttachFileIcon,
+  CheckCircle as CheckCircleIcon,
+  Cancel as CancelIcon,
+  HourglassEmpty as HourglassEmptyIcon,
+  Person as PersonIcon,
 } from '@mui/icons-material';
 import { requestsAPI, formTemplatesAPI } from '../services/api';
 import RequestAttachments from '../components/RequestAttachments';
@@ -142,6 +152,7 @@ const RequestDetail = () => {
   const [error, setError] = useState('');
   const [formTemplate, setFormTemplate] = useState(null);
   const [formData, setFormData] = useState(null);
+  const [tabValue, setTabValue] = useState(0);
 
   useEffect(() => {
     fetchRequest();
@@ -421,49 +432,146 @@ const RequestDetail = () => {
         />
       </Box>
 
-      <Box sx={{ mb: 3 }}>
-        <RequestComments requestId={request.id} />
-      </Box>
-
-      {request.approvals && request.approvals.length > 0 && (
-        <Paper
-          elevation={0}
+      <Paper
+        elevation={0}
+        sx={{
+          borderRadius: 3,
+          border: '1px solid',
+          borderColor: 'divider',
+          overflow: 'hidden',
+        }}
+      >
+        <Tabs
+          value={tabValue}
+          onChange={(e, newValue) => setTabValue(newValue)}
           sx={{
-            p: 3,
-            borderRadius: 3,
-            border: '1px solid',
+            borderBottom: 1,
             borderColor: 'divider',
+            bgcolor: '#f8fafc',
           }}
         >
-          <Typography variant="h6" gutterBottom>
-            Onay Geçmişi
-          </Typography>
-          {request.approvals.map((approval, index) => (
-            <Card key={index} sx={{ mb: 2 }}>
-              <CardContent>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <Typography variant="subtitle1">
-                    {approval.approverName}
+          <Tab label="Yorumlar" />
+          <Tab label="Onay Akışı" />
+        </Tabs>
+
+        <Box sx={{ p: 3 }}>
+          {tabValue === 0 && (
+            <RequestComments requestId={request.id} />
+          )}
+
+          {tabValue === 1 && (
+            <Box>
+              {request.approvals && request.approvals.length > 0 ? (
+                <>
+                  <Typography variant="h6" gutterBottom>
+                    Onay Akışı Detayları
                   </Typography>
-                  <Chip
-                    label={approval.status}
-                    color={approval.status === 'Approved' ? 'success' : 'error'}
-                    size="small"
-                  />
-                </Box>
-                {approval.comments && (
-                  <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                    {approval.comments}
-                  </Typography>
-                )}
-                <Typography variant="caption" color="text.secondary">
-                  {new Date(approval.approvedAt).toLocaleString('tr-TR')}
-                </Typography>
-              </CardContent>
-            </Card>
-          ))}
-        </Paper>
-      )}
+
+                  {request.workflowName && (
+                    <Alert severity="info" sx={{ mb: 3 }}>
+                      <strong>Workflow:</strong> {request.workflowName}
+                    </Alert>
+                  )}
+
+                  <Stepper orientation="vertical">
+                    {request.approvals.map((approval, index) => {
+                      const isApproved = approval.status === 'Approved';
+                      const isRejected = approval.status === 'Rejected';
+                      const isPending = approval.status === 'Pending';
+
+                      return (
+                        <Step key={index} active={true} completed={isApproved}>
+                          <StepLabel
+                            StepIconComponent={() => (
+                              <Box
+                                sx={{
+                                  width: 40,
+                                  height: 40,
+                                  borderRadius: '50%',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  bgcolor: isApproved
+                                    ? 'success.main'
+                                    : isRejected
+                                    ? 'error.main'
+                                    : 'grey.300',
+                                  color: 'white',
+                                }}
+                              >
+                                {isApproved ? (
+                                  <CheckCircleIcon />
+                                ) : isRejected ? (
+                                  <CancelIcon />
+                                ) : (
+                                  <HourglassEmptyIcon />
+                                )}
+                              </Box>
+                            )}
+                          >
+                            <Box>
+                              <Typography variant="subtitle1" fontWeight={600}>
+                                Level {approval.level} - {approval.approverName}
+                              </Typography>
+                              <Typography variant="caption" color="text.secondary">
+                                {approval.approverEmail}
+                              </Typography>
+                            </Box>
+                          </StepLabel>
+                          <StepContent>
+                            <Card variant="outlined" sx={{ mt: 1, mb: 2 }}>
+                              <CardContent>
+                                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                                  <Chip
+                                    label={
+                                      isApproved
+                                        ? 'Onaylandı'
+                                        : isRejected
+                                        ? 'Reddedildi'
+                                        : 'Bekliyor'
+                                    }
+                                    color={
+                                      isApproved
+                                        ? 'success'
+                                        : isRejected
+                                        ? 'error'
+                                        : 'warning'
+                                    }
+                                    size="small"
+                                  />
+                                  {approval.approvedAt && (
+                                    <Typography variant="caption" color="text.secondary">
+                                      {new Date(approval.approvedAt).toLocaleString('tr-TR')}
+                                    </Typography>
+                                  )}
+                                </Box>
+                                {approval.comments && (
+                                  <Box sx={{ mt: 2, p: 2, bgcolor: '#f8fafc', borderRadius: 1 }}>
+                                    <Typography variant="caption" color="text.secondary" fontWeight={600}>
+                                      Yorum:
+                                    </Typography>
+                                    <Typography variant="body2" sx={{ mt: 0.5 }}>
+                                      {approval.comments}
+                                    </Typography>
+                                  </Box>
+                                )}
+                              </CardContent>
+                            </Card>
+                          </StepContent>
+                        </Step>
+                      );
+                    })}
+                  </Stepper>
+                </>
+              ) : (
+                <Alert severity="info">
+                  Bu talep için henüz onay akışı başlatılmamış.
+                </Alert>
+              )}
+            </Box>
+          )}
+        </Box>
+      </Paper>
     </Container>
   );
 };

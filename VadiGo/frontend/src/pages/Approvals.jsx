@@ -25,11 +25,14 @@ import {
   Card,
   CardContent,
   Grid,
+  Checkbox,
 } from '@mui/material';
 import {
   CheckCircle as ApproveIcon,
   Cancel as RejectIcon,
   Undo as ReturnIcon,
+  CheckBox as CheckBoxIcon,
+  CheckBoxOutlineBlank as CheckBoxOutlineBlankIcon,
 } from '@mui/icons-material';
 import { approvalsAPI } from '../services/api';
 
@@ -65,11 +68,14 @@ const Approvals = () => {
   const [approvalHistory, setApprovalHistory] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [selectedApprovals, setSelectedApprovals] = useState([]);
   const [actionDialog, setActionDialog] = useState({
     open: false,
     type: '',
     approvalId: null,
+    approvalIds: [],
     requestTitle: '',
+    isBulk: false,
   });
   const [comments, setComments] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
@@ -96,28 +102,77 @@ const Approvals = () => {
     }
   };
 
+  const handleSelectApproval = (approvalId) => {
+    setSelectedApprovals(prev =>
+      prev.includes(approvalId)
+        ? prev.filter(id => id !== approvalId)
+        : [...prev, approvalId]
+    );
+  };
+
+  const handleSelectAll = () => {
+    if (selectedApprovals.length === pendingApprovals.length) {
+      setSelectedApprovals([]);
+    } else {
+      setSelectedApprovals(pendingApprovals.map(a => a.id));
+    }
+  };
+
   const handleOpenDialog = (type, approvalId, requestTitle) => {
-    setActionDialog({ open: true, type, approvalId, requestTitle });
+    setActionDialog({ open: true, type, approvalId, approvalIds: [], requestTitle, isBulk: false });
+    setComments('');
+  };
+
+  const handleOpenBulkDialog = (type) => {
+    if (selectedApprovals.length === 0) {
+      setError('Lütfen en az bir onay seçin.');
+      return;
+    }
+    setActionDialog({
+      open: true,
+      type,
+      approvalId: null,
+      approvalIds: selectedApprovals,
+      requestTitle: `${selectedApprovals.length} talep`,
+      isBulk: true
+    });
     setComments('');
   };
 
   const handleCloseDialog = () => {
-    setActionDialog({ open: false, type: '', approvalId: null, requestTitle: '' });
+    setActionDialog({ open: false, type: '', approvalId: null, approvalIds: [], requestTitle: '', isBulk: false });
     setComments('');
   };
 
   const handleAction = async () => {
     try {
       setActionLoading(true);
-      const { type, approvalId } = actionDialog;
+      const { type, approvalId, approvalIds, isBulk } = actionDialog;
       const data = { comments };
 
-      if (type === 'approve') {
-        await approvalsAPI.approve(approvalId, data);
-      } else if (type === 'reject') {
-        await approvalsAPI.reject(approvalId, data);
-      } else if (type === 'return') {
-        await approvalsAPI.return(approvalId, data);
+      if (isBulk) {
+        // Bulk operation
+        const promises = approvalIds.map(id => {
+          if (type === 'approve') {
+            return approvalsAPI.approve(id, data);
+          } else if (type === 'reject') {
+            return approvalsAPI.reject(id, data);
+          } else if (type === 'return') {
+            return approvalsAPI.return(id, data);
+          }
+          return Promise.resolve();
+        });
+        await Promise.all(promises);
+        setSelectedApprovals([]);
+      } else {
+        // Single operation
+        if (type === 'approve') {
+          await approvalsAPI.approve(approvalId, data);
+        } else if (type === 'reject') {
+          await approvalsAPI.reject(approvalId, data);
+        } else if (type === 'return') {
+          await approvalsAPI.return(approvalId, data);
+        }
       }
 
       handleCloseDialog();
@@ -172,6 +227,50 @@ const Approvals = () => {
 
       {tabValue === 0 && (
         <Box>
+          {pendingApprovals.length > 0 && (
+            <Box sx={{ mb: 2, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+              <Button
+                variant="outlined"
+                size="small"
+                startIcon={selectedApprovals.length === pendingApprovals.length ? <CheckBoxIcon /> : <CheckBoxOutlineBlankIcon />}
+                onClick={handleSelectAll}
+              >
+                {selectedApprovals.length === pendingApprovals.length ? 'Tümünü Kaldır' : 'Tümünü Seç'}
+              </Button>
+              {selectedApprovals.length > 0 && (
+                <>
+                  <Button
+                    variant="contained"
+                    size="small"
+                    color="success"
+                    startIcon={<ApproveIcon />}
+                    onClick={() => handleOpenBulkDialog('approve')}
+                  >
+                    Toplu Onayla ({selectedApprovals.length})
+                  </Button>
+                  <Button
+                    variant="contained"
+                    size="small"
+                    color="error"
+                    startIcon={<RejectIcon />}
+                    onClick={() => handleOpenBulkDialog('reject')}
+                  >
+                    Toplu Reddet ({selectedApprovals.length})
+                  </Button>
+                  <Button
+                    variant="contained"
+                    size="small"
+                    color="warning"
+                    startIcon={<ReturnIcon />}
+                    onClick={() => handleOpenBulkDialog('return')}
+                  >
+                    Toplu İade ({selectedApprovals.length})
+                  </Button>
+                </>
+              )}
+            </Box>
+          )}
+
           {pendingApprovals.length === 0 ? (
             <Paper
               elevation={0}
@@ -206,10 +305,16 @@ const Approvals = () => {
               >
                 <CardContent>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
-                    <Box sx={{ flex: 1 }}>
-                      <Typography variant="h6" gutterBottom>
-                        {approval.request.title}
-                      </Typography>
+                    <Box sx={{ display: 'flex', alignItems: 'flex-start', flex: 1 }}>
+                      <Checkbox
+                        checked={selectedApprovals.includes(approval.id)}
+                        onChange={() => handleSelectApproval(approval.id)}
+                        sx={{ mt: -1, mr: 1 }}
+                      />
+                      <Box sx={{ flex: 1 }}>
+                        <Typography variant="h6" gutterBottom>
+                          {approval.request.title}
+                        </Typography>
                       <Grid container spacing={2} sx={{ mt: 1 }}>
                         <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                           <Typography variant="caption" color="text.secondary">
@@ -256,6 +361,7 @@ const Approvals = () => {
                           })}
                         </Typography>
                       )}
+                      </Box>
                     </Box>
                   </Box>
                   <Box sx={{

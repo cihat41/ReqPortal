@@ -24,6 +24,9 @@ public class ApprovalWorkflow
 
     public int Priority { get; set; } = 0; // Higher priority workflows are checked first
 
+    [MaxLength(50)]
+    public string ApprovalStrategy { get; set; } = ApprovalStrategies.All; // Any, All, Majority - TÜM WORKFLOW İÇİN
+
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
     public DateTime? UpdatedAt { get; set; }
@@ -47,9 +50,6 @@ public class ApprovalWorkflowStep
     [Required]
     [MaxLength(50)]
     public string StepType { get; set; } = StepTypes.Sequential; // Sequential or Parallel
-
-    [MaxLength(50)]
-    public string ApprovalStrategy { get; set; } = ApprovalStrategies.All; // Any, All, Majority (paralel için)
 
     public int? RoleId { get; set; }
 

@@ -89,7 +89,13 @@ Talebi incelemek için sisteme giriş yapınız.
     [HttpGet]
     public async Task<ActionResult<IEnumerable<RequestDto>>> GetRequests(
         [FromQuery] string? status = null,
-        [FromQuery] string? type = null)
+        [FromQuery] string? type = null,
+        [FromQuery] string? search = null,
+        [FromQuery] string? priority = null,
+        [FromQuery] string? category = null,
+        [FromQuery] int? formTemplateId = null,
+        [FromQuery] DateTime? startDate = null,
+        [FromQuery] DateTime? endDate = null)
     {
         try
         {
@@ -106,6 +112,38 @@ Talebi incelemek için sisteme giriş yapınız.
             if (!string.IsNullOrEmpty(type))
             {
                 query = query.Where(r => r.Type == type);
+            }
+
+            if (!string.IsNullOrEmpty(search))
+            {
+                query = query.Where(r => r.Title.Contains(search) || r.Description.Contains(search));
+            }
+
+            if (!string.IsNullOrEmpty(priority))
+            {
+                query = query.Where(r => r.Priority == priority);
+            }
+
+            if (!string.IsNullOrEmpty(category))
+            {
+                query = query.Where(r => r.Category.Contains(category));
+            }
+
+            if (formTemplateId.HasValue)
+            {
+                query = query.Where(r => r.FormTemplateId == formTemplateId.Value);
+            }
+
+            if (startDate.HasValue)
+            {
+                var startUtc = startDate.Value.ToUniversalTime();
+                query = query.Where(r => r.CreatedAt >= startUtc);
+            }
+
+            if (endDate.HasValue)
+            {
+                var endUtc = endDate.Value.AddDays(1).ToUniversalTime(); // Include the entire end date
+                query = query.Where(r => r.CreatedAt < endUtc);
             }
 
             var requests = await query
@@ -151,11 +189,24 @@ Talebi incelemek için sisteme giriş yapınız.
             var request = await _context.Requests
                 .Include(r => r.Requester)
                 .Include(r => r.Attachments)
-                .FirstOrDefaultAsync(r => r.Id == id && r.RequesterId == userId);
+                .Include(r => r.Approvals)
+                    .ThenInclude(a => a.Approver)
+                .Include(r => r.FormTemplate)
+                    .ThenInclude(ft => ft!.DefaultWorkflow)
+                .FirstOrDefaultAsync(r => r.Id == id);
 
             if (request == null)
             {
                 return NotFound(new { message = "Talep bulunamadı" });
+            }
+
+            // Check if user has access to this request (requester or approver)
+            var isRequester = request.RequesterId == userId;
+            var isApprover = request.Approvals?.Any(a => a.ApproverId == userId) ?? false;
+
+            if (!isRequester && !isApprover)
+            {
+                return Forbid();
             }
 
             var requestDto = new RequestDto
@@ -185,7 +236,23 @@ Talebi incelemek için sisteme giriş yapınız.
                     FileSize = a.FileSize,
                     ContentType = a.ContentType,
                     UploadedAt = a.UploadedAt
-                }).ToList()
+                }).ToList(),
+                Approvals = request.Approvals?.OrderBy(a => a.Level).ThenBy(a => a.Order).Select(a => new ApprovalDto
+                {
+                    Id = a.Id,
+                    RequestId = a.RequestId,
+                    ApproverId = a.ApproverId,
+                    ApproverName = $"{a.Approver.FirstName} {a.Approver.LastName}",
+                    ApproverEmail = a.Approver.Email,
+                    Level = a.Level,
+                    StepOrder = a.Order,
+                    Status = a.Status,
+                    Comments = a.Comments,
+                    ApprovedAt = a.ApprovedAt,
+                    CreatedAt = a.CreatedAt
+                }).ToList(),
+                WorkflowId = request.FormTemplate?.DefaultWorkflowId,
+                WorkflowName = request.FormTemplate?.DefaultWorkflow?.Name
             };
 
             return Ok(requestDto);

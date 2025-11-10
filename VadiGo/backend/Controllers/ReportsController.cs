@@ -231,8 +231,10 @@ public class ReportsController : ControllerBase
                 approved = g.Count(a => a.Status == "Approved"),
                 rejected = g.Count(a => a.Status == "Rejected"),
                 pending = g.Count(a => a.Status == "Pending"),
-                avgResponseTimeHours = g.Where(a => a.ApprovedAt.HasValue)
-                    .Average(a => (a.ApprovedAt!.Value - a.CreatedAt).TotalHours)
+                avgResponseTimeHours = g.Where(a => a.ApprovedAt.HasValue).Any()
+                    ? g.Where(a => a.ApprovedAt.HasValue)
+                        .Average(a => (a.ApprovedAt!.Value - a.CreatedAt).TotalHours)
+                    : 0
             })
             .OrderByDescending(x => x.totalApprovals)
             .ToList();
