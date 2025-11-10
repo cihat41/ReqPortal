@@ -6,6 +6,7 @@ using TalepSistemi.API.Data;
 using TalepSistemi.API.DTOs;
 using TalepSistemi.API.Models;
 using TalepSistemi.API.Services;
+using TalepSistemi.API.Services;
 
 namespace TalepSistemi.API.Controllers;
 
@@ -188,12 +189,7 @@ Talebi incelemek için sisteme giriş yapınız.
             var userId = GetCurrentUserId();
             var request = await _context.Requests
                 .Include(r => r.Requester)
-                .Include(r => r.Attachments)
-                .Include(r => r.Approvals)
-                    .ThenInclude(a => a.Approver)
-                .Include(r => r.FormTemplate)
-                    .ThenInclude(ft => ft!.DefaultWorkflow)
-                .FirstOrDefaultAsync(r => r.Id == id);
+                .FirstOrDefaultAsync(r => r.Id == id && r.RequesterId == userId);
 
             if (request == null)
             {
@@ -228,31 +224,7 @@ Talebi incelemek için sisteme giriş yapınız.
                 SlaHours = request.SlaHours,
                 CreatedAt = request.CreatedAt,
                 SubmittedAt = request.SubmittedAt,
-                CompletedAt = request.CompletedAt,
-                Attachments = request.Attachments?.Select(a => new AttachmentDto
-                {
-                    Id = a.Id,
-                    FileName = a.FileName,
-                    FileSize = a.FileSize,
-                    ContentType = a.ContentType,
-                    UploadedAt = a.UploadedAt
-                }).ToList(),
-                Approvals = request.Approvals?.OrderBy(a => a.Level).ThenBy(a => a.Order).Select(a => new ApprovalDto
-                {
-                    Id = a.Id,
-                    RequestId = a.RequestId,
-                    ApproverId = a.ApproverId,
-                    ApproverName = $"{a.Approver.FirstName} {a.Approver.LastName}",
-                    ApproverEmail = a.Approver.Email,
-                    Level = a.Level,
-                    StepOrder = a.Order,
-                    Status = a.Status,
-                    Comments = a.Comments,
-                    ApprovedAt = a.ApprovedAt,
-                    CreatedAt = a.CreatedAt
-                }).ToList(),
-                WorkflowId = request.FormTemplate?.DefaultWorkflowId,
-                WorkflowName = request.FormTemplate?.DefaultWorkflow?.Name
+                CompletedAt = request.CompletedAt
             };
 
             return Ok(requestDto);

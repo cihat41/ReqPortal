@@ -51,6 +51,9 @@ public class ApprovalWorkflowStep
     [MaxLength(50)]
     public string StepType { get; set; } = StepTypes.Sequential; // Sequential or Parallel
 
+    [MaxLength(50)]
+    public string ApprovalStrategy { get; set; } = ApprovalStrategies.All; // Any, All, Majority (paralel için)
+
     public int? RoleId { get; set; }
 
     public int? UserId { get; set; }
